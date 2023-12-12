@@ -7,7 +7,8 @@ import doobie.implicits._
 trait MeetingSql {
   def create(meeting: CreateMeeting): ConnectionIO[MeetingId]
 
-  def getMeetingsHostedBy(userId: UserId): ConnectionIO[List[MeetingWithoutParticipants]]
+  def getMeetingsHostedBy(meetingHost: MeetingHost): ConnectionIO[List[Meeting]]
+  def cancelMeeting(meetingId: MeetingId): ConnectionIO[Unit]
 }
 
 object MeetingSql {
@@ -16,16 +17,22 @@ object MeetingSql {
       sql"""
            INSERT INTO meeting_reminder.meeting
            VALUES (date_time, title, location_id, host)
-           (${meeting.dateTime}, ${meeting.title}, ${meeting.locationId}, ${meeting.host})
+           (${meeting.dateTime}, ${meeting.title}, ${meeting.location.id}, ${meeting.host})
            """.update
 
-    def selectMeetingsHostedBy(userId: UserId): Query0[MeetingWithoutParticipants] =
+    def selectMeetingsHostedBy(meetingHost: MeetingHost): Query0[Meeting] =
       sql"""
            SELECT m.id, date_time, title, location_id, host
            FROM meeting_reminder.meeting_participant
            LEFT JOIN meeting_reminder.meeting m on meeting_participant.meeting_id = m.id
-           WHERE meeting_participant.user_id == $userId
-         """.query[MeetingWithoutParticipants]
+           WHERE meeting_participant.user_id == $meetingHost
+         """.query[Meeting]
+
+    def deleteMeetingById(meetingId: MeetingId): Update0 =
+      sql"""
+           DELETE FROM meeting_reminder.meeting
+           WHERE id == $meetingId
+         """.update
   }
 
   private final class Impl extends MeetingSql {
@@ -35,8 +42,11 @@ object MeetingSql {
       insertMeetingSql(createMeeting)
         .withUniqueGeneratedKeys[MeetingId]("id")
 
-    override def getMeetingsHostedBy(userId: UserId): ConnectionIO[List[MeetingWithoutParticipants]] =
-      selectMeetingsHostedBy(userId).to[List]
+    override def getMeetingsHostedBy(meetingHost: MeetingHost): ConnectionIO[List[Meeting]] =
+      selectMeetingsHostedBy(meetingHost).to[List]
+
+    override def cancelMeeting(meetingId: MeetingId): doobie.ConnectionIO[Unit] =
+      deleteMeetingById(meetingId).run.map {_ => ()}
   }
 
   def make: MeetingSql = new Impl

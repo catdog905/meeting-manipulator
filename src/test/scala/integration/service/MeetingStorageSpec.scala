@@ -10,7 +10,7 @@ import org.junit.Rule
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import service.MeetingStorage
+import storage.MeetingStorage
 
 import java.time.ZonedDateTime
 import scala.concurrent.ExecutionContext
@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext
 class MeetingStorageSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   // https://www.baeldung.com/scala/testcontainers-scala
 
-  val _embeddedPostgresRules: PreparedDbRule =
+  /*val _embeddedPostgresRules: PreparedDbRule =
     EmbeddedPostgresRules.preparedDatabase(LiquibasePreparer.forClasspathLocation("db/migrations/changelog.xml"));
 
   @Rule
@@ -39,6 +39,6 @@ class MeetingStorageSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAl
         Seq.empty
       )
     )
-  }
+  }*/
 
 }

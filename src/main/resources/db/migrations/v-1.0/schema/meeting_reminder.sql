@@ -4,7 +4,7 @@ CREATE TABLE meeting_reminder.location (
     id SERIAL PRIMARY KEY,
     link        varchar[],
     address     varchar[],
-    CONSTRAINT location_link_address_excusivity CHECK (link is NULL or address is NULL)
+    CONSTRAINT location_link_address_exclusivity CHECK (link is NULL or address is NULL)
 );
 
 COMMENT ON TABLE meeting_reminder.location IS 'Meeting location (online or offline)';
@@ -22,6 +22,7 @@ COMMENT ON COLUMN meeting_reminder."user".id IS 'Id of the user';
 CREATE TABLE meeting_reminder.meeting (
     id          SERIAL       PRIMARY KEY,
     date_time   timestamptz  NOT NULL,
+    duration    interval     NOT NULL,
     title       varchar[]    NOT NULL,
     location_id int          NOT NULL REFERENCES meeting_reminder.location(id),
     host        int          NOT NULL REFERENCES meeting_reminder."user"(id)
@@ -30,6 +31,7 @@ CREATE TABLE meeting_reminder.meeting (
 COMMENT ON TABLE meeting_reminder.meeting IS 'All conducted and planned meetings';
 COMMENT ON COLUMN meeting_reminder.meeting.id IS 'Id of the meeting';
 COMMENT ON COLUMN meeting_reminder.meeting.date_time IS 'Date and time of the meeting';
+COMMENT ON COLUMN meeting_reminder.meeting.duration IS 'Duration of the meeting';
 COMMENT ON COLUMN meeting_reminder.meeting.title IS 'Name of the meeting';
 COMMENT ON COLUMN meeting_reminder.meeting.location_id IS 'Location of the meeting';
 

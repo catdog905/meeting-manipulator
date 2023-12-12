@@ -1,45 +1,33 @@
 package bot
 
-import cats.effect.Async
+import bot.command.UserCommand
+import cats.Monad
+import cats.effect.unsafe.implicits.global
+import cats.effect.{Async, IO}
 import cats.syntax.functor._
 import com.bot4s.telegram.cats.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
 import com.bot4s.telegram.models._
-import service.MeetingStorage
+import domain.UserId
+import storage.{CommandsAwareStorage, MeetingStorage}
 import sttp.client3.SttpBackend
 
-case class MeetingReminderBot[F[_]: Async](
-  token: String,
-  backend: SttpBackend[F, Any],
-  storage: MeetingStorage[F]
+case class MeetingReminderBot[F[_]: Monad : Async](token: String, backend: SttpBackend[F, Any], commandsAwareStorage: CommandsAwareStorage[F]
 ) extends TelegramBot[F](token, backend)
   with Polling[F] {
+  implicit val implicitCommandsAwareStorage: CommandsAwareStorage[F] = commandsAwareStorage
+  implicit val implicitCommandsAwareStoradge: CommandsAwareStorage[IO] = commandsAwareStorage.asInstanceOf[CommandsAwareStorage[IO]]
 
   override def receiveMessage(msg: Message): F[Unit] = {
     request(
       SendMessage(
         msg.source, // 1399878184,
         msg.text match {
-          case Some("Hello") => s"Goodbye ${msg.source}"
-          case Some(text)    => "Test"
+          case Some(text)    => UserCommand[IO](text, UserId(0)).fold("Incorrect command")(_.act.unsafeRunSync().toString)
           case None          => "meow"
         }
       )
     ).void
   }
 
-  /*override def receiveExtMessage(extMessage: (Message, Option[User])): F[Unit] =
-    request(
-      SendMessage(
-        extMessage._1.source,
-        extMessage._1.text match {
-          case Some("Hello") => s"ExtMessage Goodbye ${extMessage._1.source} ${extMessage._2.get.username.get}"
-          case Some(text) => "ExtMessage Катя сама любимая колбаска"
-          case None => "ExtMessage блдолро"
-        }
-      )
-    ).void*/
-
-  override def receiveEditedMessage(editedMessage: Message): F[Unit] =
-    throw new RuntimeException()
 }

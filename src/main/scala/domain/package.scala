@@ -4,7 +4,7 @@ import doobie.postgres.implicits._
 import doobie.{Meta, Read}
 import io.estatico.newtype.macros.newtype
 
-import java.time.ZonedDateTime
+import java.time.{Duration, Period, ZonedDateTime}
 import scala.language.implicitConversions
 
 package object domain {
@@ -39,6 +39,15 @@ package object domain {
 
   @derive(encoder, decoder)
   @newtype
+  case class MeetingDuration(value: Period)
+
+  object MeetingDuration {
+    implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[Int].timap(_ => MeetingDuration(Period.ofDays(1)))(_ => 1) //TODO: fix
+    implicit val read: Read[MeetingDuration] = Read[Int].map(_ => MeetingDuration(Period.ofDays(1))) //TODO: fix
+  }
+
+  @derive(encoder, decoder)
+  @newtype
   case class MeetingTitle(title: String)
 
   object MeetingTitle {
@@ -48,11 +57,11 @@ package object domain {
 
   @derive(encoder, decoder)
   @newtype
-  case class UserId(id: Int)
+  case class UserId(id: Long)
 
   object UserId {
-    implicit val userIdMeta: Meta[UserId] = Meta[Int].timap(UserId(_))(_.id)
-    implicit val read: Read[UserId] = Read[Int].map(UserId.apply)
+    implicit val userIdMeta: Meta[UserId] = Meta[Long].timap(UserId(_))(_.id)
+    implicit val read: Read[UserId] = Read[Long].map(UserId.apply)
   }
 
   @derive(encoder, decoder)
@@ -75,14 +84,20 @@ package object domain {
 
   @derive(encoder, decoder)
   @newtype
-  case class MeetingHost(value: String)
+  case class MeetingHost(value: UserId)
 
   object MeetingHost {
-    implicit val meetingHostMeta: Meta[MeetingHost] = Meta[String].timap(MeetingHost(_))(_.value)
-    implicit val read: Read[MeetingHost] = Read[String].map(MeetingHost.apply)
+    implicit val meetingHostMeta: Meta[MeetingHost] = Meta[UserId].timap(MeetingHost(_))(_.value)
+    implicit val read: Read[MeetingHost] = Read[UserId].map(MeetingHost.apply)
+
   }
 
   @derive(encoder, decoder)
   @newtype
   case class ChatId(value: Int)
+
+  object ChatId {
+    implicit val meetingHostMeta: Meta[ChatId] = Meta[Int].timap(ChatId(_))(_.value)
+    implicit val read: Read[ChatId] = Read[Int].map(ChatId.apply)
+  }
 }
