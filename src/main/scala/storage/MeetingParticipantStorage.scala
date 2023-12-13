@@ -3,7 +3,7 @@ package storage
 import cats.effect.IO
 import cats.effect.std.Random
 import domain._
-import error.{AppError, InternalError, InternalStorageError, NoSuchMeetingFound, PersistenceError, UserAlreadyJoinedMeeting, UsersAlreadyJoinedMeeting}
+import error.{AppError, InternalError, InternalStorageError, NoSuchMeetingFound, AppPersistenceError, UserAlreadyJoinedMeeting, UsersAlreadyJoinedMeeting}
 import cats.syntax.either._
 
 import collection.mutable.Map

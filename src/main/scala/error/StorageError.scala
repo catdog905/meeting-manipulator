@@ -10,7 +10,7 @@ sealed trait StorageError {
   val message: String
   val cause: Option[Throwable] = None
 
-  val asPersistenceError: PersistenceError = PersistenceError(self)
+  val asPersistenceError: AppPersistenceError = AppPersistenceError(self)
 }
 final case class NoSuchMeetingFound(message: String) extends StorageError
 
