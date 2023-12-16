@@ -1,7 +1,7 @@
 package storage
 
 import cats.{Applicative, Monad}
-import domain.{CreateMeetingWithParticipants, Meeting, MeetingId, UserId}
+import domain.{ChatId, CreateMeetingWithParticipants, CreateUser, Meeting, MeetingId, UserId}
 import error.{AppError, NoPermissionToCancelMeeting}
 import cats.syntax.all._
 
@@ -12,6 +12,12 @@ case class CommandsAwareStorage[F[_]: Monad](
   userStorage: UserStorage[F],
   meetingParticipantStorage: MeetingParticipantStorage[F]
 ) {
+  def userId(chatId: ChatId): F[Either[AppError, UserId]] = userStorage.getUserIdByChatId(chatId).flatMap {
+    case Some(userId) => Applicative[F].pure(userId.asRight)
+    case None => userStorage.addUser(CreateUser(chatId))
+  }
+
+  //TODO: Check whether all participants exist in UserStorage
   def arrangeMeeting(createMeetingWithParticipants: CreateMeetingWithParticipants): F[Either[AppError, MeetingId]] =
     for {
       meetingIdEither <- meetingStorage.create(createMeetingWithParticipants.createMeeting)

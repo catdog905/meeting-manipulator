@@ -1,33 +1,44 @@
 package bot
 
+import bot.chatbased.{BotResponse, InMemoryUserChatPool, Panic, UserChatPool}
 import bot.command.UserCommand
-import cats.Monad
+import cats.{Applicative, Monad}
 import cats.effect.unsafe.implicits.global
 import cats.effect.{Async, IO}
 import cats.syntax.functor._
 import com.bot4s.telegram.cats.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
-import com.bot4s.telegram.models._
-import domain.UserId
+import domain.{ChatId, UserId}
 import storage.{CommandsAwareStorage, MeetingStorage}
 import sttp.client3.SttpBackend
+import cats.syntax.all._
+import com.bot4s.telegram.models.Message
+import error.AppError
+import cats.implicits.toFunctorOps
 
-case class MeetingReminderBot[F[_]: Monad : Async](token: String, backend: SttpBackend[F, Any], commandsAwareStorage: CommandsAwareStorage[F]
+case class MeetingReminderBot[F[_]: Monad : Async](
+  token: String,
+  backend: SttpBackend[F, Any],
+  commandsAwareStorage: CommandsAwareStorage[F]
 ) extends TelegramBot[F](token, backend)
   with Polling[F] {
   implicit val implicitCommandsAwareStorage: CommandsAwareStorage[F] = commandsAwareStorage
-  implicit val implicitCommandsAwareStoradge: CommandsAwareStorage[IO] = commandsAwareStorage.asInstanceOf[CommandsAwareStorage[IO]]
+  val userChatPool: InMemoryUserChatPool[F] = InMemoryUserChatPool[F](commandsAwareStorage)
 
   override def receiveMessage(msg: Message): F[Unit] = {
-    request(
-      SendMessage(
-        msg.source, // 1399878184,
-        msg.text match {
-          case Some(text)    => UserCommand[IO](text, UserId(0)).fold("Incorrect command")(_.act.unsafeRunSync().toString)
-          case None          => "meow"
+    def response(msg: Message): F[BotResponse[_]] =
+      for {
+        userIdEither <- commandsAwareStorage.userId(ChatId(msg.source))
+        botResponse <- userIdEither match {
+          case Right(userId)         => userChatPool.updatePoolByUserMessage(userId, msg)
+          case Left(error: AppError) => Applicative[F].pure(Panic(error))
         }
-      )
-    ).void
+      } yield botResponse
+
+    val sendMessageF: BotResponse[_] => F[Unit] = botResponse =>
+      request(SendMessage(msg.source, botResponse.toString)).void
+
+    response(msg).flatMap(sendMessageF)
   }
 
 }

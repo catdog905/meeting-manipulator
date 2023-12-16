@@ -4,6 +4,7 @@ ThisBuild / scalaVersion := "2.13.12"
 
 Compile / compile / scalacOptions ++= Seq(
   "-Werror",
+  "-Xfatal-warnings",
   "-Wdead-code",
   "-Wextra-implicit",
   "-Wnumeric-widen",
@@ -54,7 +55,8 @@ lazy val root = (project in file("."))
       "com.github.nscala-time" %% "nscala-time" % "2.32.0",
       "com.opentable.components" % "otj-pg-embedded" % "1.0.1" % Test,
       "com.h2database" % "h2" % "2.1.214" % Test,
-      "com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.9.2"
+      "com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.9.2",
+      "dev.bgahagan" %% "scala-regex-interpolation" % "1.0.0"
     ),
     dependencyOverrides += "io.circe" %% "circe-core" % "0.14.5",
     scalacOptions ++= Seq("-Ymacro-annotations")

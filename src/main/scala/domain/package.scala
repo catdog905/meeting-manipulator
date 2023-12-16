@@ -1,11 +1,16 @@
+import cats.Show
 import derevo.circe.{decoder, encoder}
 import derevo.derive
 import doobie.postgres.implicits._
 import doobie.{Meta, Read}
+import error.{AppError, ParsingError}
 import io.estatico.newtype.macros.newtype
 
 import java.time.{Duration, Period, ZonedDateTime}
 import scala.language.implicitConversions
+import scala.util.{Failure, Success, Try}
+import cats.syntax.all._
+import com.bot4s.telegram.models.ChatId
 
 package object domain {
   @derive(encoder, decoder)
@@ -15,6 +20,8 @@ package object domain {
   object MeetingId {
     implicit val meetingIdMeta: Meta[MeetingId] = Meta[Long].timap(MeetingId(_))(_.value)
     implicit val read: Read[MeetingId] = Read[Long].map(MeetingId.apply)
+
+    implicit val show: Show[MeetingId] = Show.show(meetingId => Show[Long].show(meetingId.value))
   }
 
   @derive(encoder, decoder)
@@ -33,6 +40,12 @@ package object domain {
   case class MeetingDateTime(dateTime: ZonedDateTime)
 
   object MeetingDateTime {
+    def apply(stringRepresentation: String): Either[ParsingError, MeetingDateTime] =
+      Try(ZonedDateTime.parse(stringRepresentation)) match {
+        case Success(zonedDateTime) => MeetingDateTime(zonedDateTime).asRight
+        case Failure(exception) => ParsingError("MeetingDateTime", exception).asLeft
+      }
+
     implicit val meetingDateTimeMeta: Meta[MeetingDateTime] = Meta[ZonedDateTime].timap(MeetingDateTime(_))(_.dateTime)
     implicit val read: Read[MeetingDateTime] = Read[ZonedDateTime].map(MeetingDateTime.apply)
   }
@@ -42,6 +55,12 @@ package object domain {
   case class MeetingDuration(value: Period)
 
   object MeetingDuration {
+    def apply(stringRepresentation: String): Either[ParsingError, MeetingDuration] =
+      Try(Period.parse(stringRepresentation)) match {
+        case Success(value) => MeetingDuration(value).asRight
+        case Failure(exception) => ParsingError("MeetingDuration", exception).asLeft
+      }
+
     implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[Int].timap(_ => MeetingDuration(Period.ofDays(1)))(_ => 1) //TODO: fix
     implicit val read: Read[MeetingDuration] = Read[Int].map(_ => MeetingDuration(Period.ofDays(1))) //TODO: fix
   }
@@ -60,6 +79,13 @@ package object domain {
   case class UserId(id: Long)
 
   object UserId {
+    def apply(stringRepresentation: String): Either[ParsingError, UserId] =
+      Try(stringRepresentation.toLong) match {
+        case Failure(exception) => ParsingError("MeetingHost", exception).asLeft
+        case Success(value) => UserId(value).asRight
+      }
+
+
     implicit val userIdMeta: Meta[UserId] = Meta[Long].timap(UserId(_))(_.id)
     implicit val read: Read[UserId] = Read[Long].map(UserId.apply)
   }
@@ -87,6 +113,9 @@ package object domain {
   case class MeetingHost(value: UserId)
 
   object MeetingHost {
+    def apply(stringRepresentation: String): Either[ParsingError, MeetingHost] =
+      UserId(stringRepresentation).map(MeetingHost(_))
+
     implicit val meetingHostMeta: Meta[MeetingHost] = Meta[UserId].timap(MeetingHost(_))(_.value)
     implicit val read: Read[MeetingHost] = Read[UserId].map(MeetingHost.apply)
 
@@ -94,10 +123,10 @@ package object domain {
 
   @derive(encoder, decoder)
   @newtype
-  case class ChatId(value: Int)
+  case class ChatId(value: Long)
 
   object ChatId {
-    implicit val meetingHostMeta: Meta[ChatId] = Meta[Int].timap(ChatId(_))(_.value)
-    implicit val read: Read[ChatId] = Read[Int].map(ChatId.apply)
+    implicit val meetingHostMeta: Meta[ChatId] = Meta[Long].timap(ChatId(_))(_.value)
+    implicit val read: Read[ChatId] = Read[Long].map(ChatId.apply)
   }
 }

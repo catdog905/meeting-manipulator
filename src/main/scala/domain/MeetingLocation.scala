@@ -8,6 +8,8 @@ sealed trait MeetingLocation {
 
 object MeetingLocation {
   def apply(location: OnlineMeetingLocation): MeetingLocation = location
+  def apply(stringRepresentation: String): MeetingLocation =
+    OfflineMeetingLocation(Address(stringRepresentation), -1)
 
   // This implicit Get instance will handle the conversion from the database representation to Location
   implicit val metaLocation: Meta[MeetingLocation] = Meta[String]

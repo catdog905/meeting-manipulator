@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.std.{Random, UUIDGen}
 import cats.implicits.catsSyntaxEitherId
 import dao.UserSql
-import domain.{CreateUser, User, UserId}
+import domain.{ChatId, CreateUser, User, UserId}
 import doobie.Transactor
 import doobie.implicits._
 import error.{AppError, InternalError, NoSuchUserFound, StorageError, UserAlreadyExists, UserAlreadyJoinedMeeting}
@@ -13,6 +13,7 @@ import scala.collection.mutable
 
 trait UserStorage[F[_]] {
   def addUser(createUser: CreateUser): F[Either[AppError, UserId]]
+  def getUserIdByChatId(chatId: ChatId): F[Option[UserId]]
   def getUserById(userId: UserId): F[Either[AppError, User]]
   def getUsersByIds(userIds: List[UserId]): F[Either[AppError, List[User]]]
 }
@@ -27,6 +28,8 @@ final case class PostgresUserStorage(userSql: UserSql, transactor: Transactor[IO
   override def getUserById(userId: UserId): IO[Either[AppError, User]] = ???
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] = ???
+
+  override def getUserIdByChatId(chatId: ChatId): IO[Option[UserId]] = ???
 }
 
 final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random: Random[IO]) extends UserStorage[IO] {
@@ -60,6 +63,9 @@ final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random:
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] =
     IO { storage.filter({ case (id, _) => userIds.contains(id) }).values.toList.asRight }
+
+  override def getUserIdByChatId(chatId: ChatId): IO[Option[UserId]] =
+    IO { storage.collectFirst { case (userId, user) if user.chatId == chatId => userId } }
 }
 
 object InMemoryUserStorage {

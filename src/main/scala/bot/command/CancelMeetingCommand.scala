@@ -1,10 +1,11 @@
 package bot.command
 
-import cats.Monad
+import cats.{Monad, Show}
 import domain.{MeetingId, UserId}
 import cats.implicits.toFunctorOps
 import error.AppError
 import storage.CommandsAwareStorage
+import tofu.logging.derivation.show.generate
 
 final case class CancelMeetingCommand[F[_]: Monad](
   meetingId: MeetingId,
@@ -16,4 +17,6 @@ final case class CancelMeetingCommand[F[_]: Monad](
       case Left(error) => Left(error)
       case Right(_)    => Right(None)
     }
+
+  override val showO: Show[Nothing] = _ => ""
 }

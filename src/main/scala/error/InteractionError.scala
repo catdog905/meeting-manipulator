@@ -10,8 +10,13 @@ sealed trait InteractionError {
   val asApplicationError: AppInteractionError = AppInteractionError(self)
 }
 
-final case class IncorrectInput(message: String) extends InteractionError //TODO
+final case class IncorrectInput(message: String) extends InteractionError
 
 object IncorrectInput {
   def apply(): IncorrectInput = IncorrectInput("Incorrect input")
+  def apply(parsingError: ParsingError): IncorrectInput = IncorrectInput(parsingError.message)
+}
+
+final case class ParsingError(objective: String, cause: Throwable) {
+  val message: String = s"Failed to parse $objective"
 }

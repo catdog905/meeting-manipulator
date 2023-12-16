@@ -1,11 +1,11 @@
 package bot.chatbased
 
-sealed trait CommandPrototype
+import bot.command.UserCommand
+import domain.UserId
+import error.AppError
 
-case object ArrangeMeetingCommandPrototype extends CommandPrototype
-
-case object CancelMeetingCommandPrototype extends CommandPrototype
-
-case object GetArrangedMeetingsCommandPrototype extends CommandPrototype
-
-case object GivePossessionCommandPrototype extends CommandPrototype
+trait CommandPrototype[F[_], O] {
+  def argumentNames: List[String]
+  def addArgument(argumentName: String, argumentValue: String): Either[AppError, CommandPrototype[F, O]]
+  def build(initiator: UserId): Option[UserCommand[F, O]]
+}

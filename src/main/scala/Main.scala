@@ -1,4 +1,5 @@
 import bot.MeetingReminderBot
+import bot.chatbased.InMemoryUserChatPool
 import cats.effect.std.Random
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import com.bot4s.telegram.methods.SendMessage
