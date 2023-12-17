@@ -60,7 +60,7 @@ case class ReadyToExecuteCommand[F[_]: Monad, O](command: UserCommand[F, O]) ext
     ReadyToExecuteCommand[F, O](command).asRight
 }
 
-sealed trait CommandBuildingStatus[F[_], O] {
+sealed trait CommandBuildingStatus[+F[_], +O] {
   def appendArgumentByMessage(message: Message): Either[AppError, CommandBuildingStatus[F, O]]
 }
 
@@ -69,7 +69,7 @@ case class ArgumentsFetching[F[_]: Monad, O](prototype: CommandPrototype[F, O], 
   override def appendArgumentByMessage(message: Message): Either[AppError, CommandBuildingStatus[F, O]] =
     message.text match {
       case None => IncorrectInput("No arguments provided").asApplicationError.asLeft
-      case Some(s"$argumentName: $argumentValue") =>
+      case Some(s"$argumentName:$argumentValue") =>
         prototype.addArgument(argumentName, argumentValue) match {
           case Left(error) => error.asLeft
           case Right(prototype) =>

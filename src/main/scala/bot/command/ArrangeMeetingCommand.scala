@@ -1,9 +1,9 @@
 package bot.command
 
-import bot.chatbased.CommandPrototype
+import bot.chatbased.{CommandPrototype}
 import cats.implicits.toFunctorOps
 import cats.{Applicative, Monad, ParallelArityFunctions, Show}
-import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
+import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, Format, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
 import error.{AppError, IncorrectInput, ParsingError}
 import storage.CommandsAwareStorage
 import sttp.tapir.server.interceptor.RequestResult.Failure
@@ -23,7 +23,7 @@ final case class ArrangeMeetingCommand[F[_]: Monad](
         CreateMeetingWithParticipants(createMeeting, participants)
       )
       .map {
-        case Left(error)      => Left(error)
+        case Left(error: AppError)      => Left(error)
         case Right(meetingId) => Right(Some(meetingId))
       }
 
@@ -36,9 +36,9 @@ object ArrangeMeetingCommand {
     duration: Option[MeetingDuration] = None,
     title: Option[MeetingTitle] = None,
     location: Option[MeetingLocation] = None,
-    participants: Option[List[UserId]] = None)
-    (implicit val commandsAwareStorage: CommandsAwareStorage[FF]
-  ) extends CommandPrototype[FF, MeetingId] {
+    participants: Option[List[UserId]] = None
+  )(implicit val commandsAwareStorage: CommandsAwareStorage[FF])
+    extends CommandPrototype[FF, MeetingId] {
 
     override def build(initiator: UserId): Option[UserCommand[FF, MeetingId]] =
       (dateTime, duration, title, location, participants) match {
@@ -59,8 +59,34 @@ object ArrangeMeetingCommand {
         case _ => None
       }
 
-    override def argumentNames: List[String] =
-      List("dateTime", "duration", "title", "location", "host", "participants")
+    override def argumentNamesWithFormat: Map[String, Format] = {
+      def addFilledArgumentsToList(arguments: List[(String, Option[Any])]): List[(String, Format)] = arguments match {
+        case Nil => Nil
+        case argument :: arguments =>
+          val nameAndFormat: Option[(String, Format)] = argument match {
+            case ("dateTime", None) => ("dateTime", MeetingDateTime.format).some
+            case ("duration", None) => ("duration", MeetingDuration.format).some
+            case ("title", None)    => ("title", MeetingTitle.format).some
+            case ("location", None) => ("location", MeetingLocation.format).some
+            case ("participants", None) =>
+              ("participants", Format(s"${UserId.format} ${UserId.format} ${UserId.format}...")).some
+            case _ => None
+          }
+          nameAndFormat match {
+            case None                => addFilledArgumentsToList(arguments)
+            case Some(nameAndFormat) => nameAndFormat :: addFilledArgumentsToList(arguments)
+          }
+      }
+      addFilledArgumentsToList(
+        List(
+          ("dateTime", dateTime),
+          ("duration", duration),
+          ("title", title),
+          ("location", location),
+          ("participants", participants)
+        )
+      ).toMap
+    }
 
     override def addArgument(
       argumentName: String,
@@ -94,7 +120,7 @@ object ArrangeMeetingCommand {
         case "title"    => newPrototype(title = MeetingTitle(argumentValue).some).asRight
         case "location" => newPrototype(location = MeetingLocation(argumentValue).some).asRight
         case "participants" =>
-          val participantStrIds: List[String] = argumentValue.split(" +").toList
+          val participantStrIds: List[String] = argumentValue.split(" +").toList.filter(_ != "")
           val participantEitherIds: List[Either[ParsingError, UserId]] = participantStrIds.map(UserId(_))
           participantEitherIds.collectFirst { case Left(error) => error } match {
             case None =>

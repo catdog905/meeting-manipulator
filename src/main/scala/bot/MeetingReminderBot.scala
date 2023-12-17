@@ -36,7 +36,7 @@ case class MeetingReminderBot[F[_]: Monad : Async](
       } yield botResponse
 
     val sendMessageF: BotResponse[_] => F[Unit] = botResponse =>
-      request(SendMessage(msg.source, botResponse.toString)).void
+      request(SendMessage(msg.source, botResponse.show)).void
 
     response(msg).flatMap(sendMessageF)
   }

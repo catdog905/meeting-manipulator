@@ -20,15 +20,14 @@ class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState])
 ) extends UserChatPool[F] {
 
   override def updatePoolByUserMessage(userId: UserId, message: Message): F[BotResponse[_]] = {
-    println(storage)
     (storage.get(userId) match {
       case None =>
         storage.addOne((userId, InactiveState(userId)))
         InactiveState(userId)
       case Some(state) => state
     }).updateStateByMessage(message) match {
-      case Left(AppInteractionError(error: IncorrectInput)) =>
-        Applicative[F].pure(ArgumentRequest(error.some))
+//      case Left(AppInteractionError(error: IncorrectInput)) =>
+//        Applicative[F].pure(Panic(error))
       case Left(error) =>
         Applicative[F].pure(Panic(error))
       case Right(ReadyToExecuteCommand(command: UserCommand[F, _])) => {
@@ -42,9 +41,12 @@ class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState])
             Applicative[F].pure(CommandSummary(commandOutput)(command.showO))
         }
       }
+      case Right(state@CommandBuildingState(userId, receivingStatus: ArgumentsFetching[F, String])) =>
+        storage.put(userId, state)
+        Applicative[F].pure(ArgumentRequest(receivingStatus.prototype))
       case Right(state) =>
         storage.put(userId, state)
-        Applicative[F].pure(ArgumentRequest())
+        Applicative[F].pure(NoResponse())
     }
   }
 }

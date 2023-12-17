@@ -1,3 +1,4 @@
+
 import cats.Show
 import derevo.circe.{decoder, encoder}
 import derevo.derive
@@ -13,6 +14,12 @@ import cats.syntax.all._
 import com.bot4s.telegram.models.ChatId
 
 package object domain {
+
+  case class Format(str: String)
+  {
+    def show: String = str
+  }
+
   @derive(encoder, decoder)
   @newtype
   case class MeetingId(value: Long)
@@ -48,6 +55,8 @@ package object domain {
 
     implicit val meetingDateTimeMeta: Meta[MeetingDateTime] = Meta[ZonedDateTime].timap(MeetingDateTime(_))(_.dateTime)
     implicit val read: Read[MeetingDateTime] = Read[ZonedDateTime].map(MeetingDateTime.apply)
+    implicit val format: Format =
+      Format("""ZonedDateTime.java format[example = "2007-12-03T10:15:30+01:00[Europe/Paris]"]""")
   }
 
   @derive(encoder, decoder)
@@ -63,6 +72,7 @@ package object domain {
 
     implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[Int].timap(_ => MeetingDuration(Period.ofDays(1)))(_ => 1) //TODO: fix
     implicit val read: Read[MeetingDuration] = Read[Int].map(_ => MeetingDuration(Period.ofDays(1))) //TODO: fix
+    val format: Format = Format("""Period.java format[example = "P1Y2M3D"]""")
   }
 
   @derive(encoder, decoder)
@@ -72,6 +82,7 @@ package object domain {
   object MeetingTitle {
     implicit val meetingTitleMeta: Meta[MeetingTitle] = Meta[String].timap(MeetingTitle(_))(_.title)
     implicit val read: Read[MeetingTitle] = Read[String].map(MeetingTitle.apply)
+    val format: Format = Format("String")
   }
 
   @derive(encoder, decoder)
@@ -88,6 +99,8 @@ package object domain {
 
     implicit val userIdMeta: Meta[UserId] = Meta[Long].timap(UserId(_))(_.id)
     implicit val read: Read[UserId] = Read[Long].map(UserId.apply)
+
+    val format: Format = Format("Long")
   }
 
   @derive(encoder, decoder)
