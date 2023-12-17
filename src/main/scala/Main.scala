@@ -4,14 +4,14 @@ import cats.effect.std.Random
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import com.bot4s.telegram.methods.SendMessage
 import config.AppConfig
-import dao.MeetingSql
+import dao.{MeetingSql, UserSql}
 import doobie.Transactor
 import io.github.liquibase4s.Liquibase
 import io.github.liquibase4s.cats.CatsMigrationHandler._
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import org.asynchttpclient.Dsl.asyncHttpClient
 import org.asynchttpclient.proxy.ProxyServer
-import storage.{CommandsAwareStorage, InMemoryMeetingParticipantStorage, InMemoryMeetingStorage, InMemoryUserStorage, MeetingStorage}
+import storage.{CommandsAwareStorage, InMemoryMeetingParticipantStorage, InMemoryMeetingStorage, InMemoryUserStorage, MeetingStorage, PostgresMeetingStorage, PostgresUserStorage}
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 
 object Main extends IOApp {
@@ -44,8 +44,8 @@ object Main extends IOApp {
         config.bot.token,
         telegramBotBackend,
         CommandsAwareStorage[IO](
-          InMemoryMeetingStorage(random),
-          InMemoryUserStorage(random),
+          PostgresMeetingStorage(MeetingSql.make, transactor),
+          PostgresUserStorage(UserSql.make, transactor),
           InMemoryMeetingParticipantStorage()
         )
       )

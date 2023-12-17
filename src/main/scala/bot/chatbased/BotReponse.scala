@@ -35,13 +35,13 @@ object ArgumentRequest {
 
 case class Panic(error: AppError) extends BotResponse[Nothing]
 object Panic {
-  implicit val panicShow: Show[Panic] = Show.show { case Panic(error) => error.message }
+  implicit val panicShow: Show[Panic] = Show.show { case Panic(error) => error.message + error.cause }
 }
 
 case class CommandSummary(result: String) extends BotResponse[String]
 object CommandSummary {
   val Done: CommandSummary = CommandSummary("Done")
-  implicit val commandSummaryShow: Show[CommandSummary] = Show.show(_ => "Done")
-  def apply(error: AppError): CommandSummary = CommandSummary(error.message)
+  implicit val commandSummaryShow: Show[CommandSummary] = Show.show(commandSummary => commandSummary.result)
+  def apply(error: AppError): CommandSummary = CommandSummary(error.message + error.cause)
   def apply[O](output: O)(implicit show: Show[O]): CommandSummary = CommandSummary(Show[O].show(output))
 }

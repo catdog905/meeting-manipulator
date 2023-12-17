@@ -4,7 +4,7 @@ import bot.chatbased.CommandPrototype
 import cats.implicits.toFunctorOps
 import cats.{Applicative, Monad, ParallelArityFunctions, Show}
 import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, Format, LocationId, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
-import error.{AppError, IncorrectInput, ParsingError}
+import error.{AppError, IncorrectInput, NoSuchUserFound, ParsingError}
 import storage.CommandsAwareStorage
 import sttp.tapir.server.interceptor.RequestResult.Failure
 import cats.syntax.all._
@@ -91,7 +91,7 @@ object ArrangeMeetingCommand {
     override def addArgument(
       argumentName: String,
       argumentValue: String
-    ): Either[AppError, CommandPrototype[FF, MeetingId]] = {
+    ): FF[Either[AppError, CommandPrototype[FF, MeetingId]]] = {
       def newPrototype(
         dateTime: Option[MeetingDateTime] = dateTime,
         duration: Option[MeetingDuration] = duration,
@@ -108,31 +108,59 @@ object ArrangeMeetingCommand {
         )
       argumentName match {
         case "dateTime" =>
-          MeetingDateTime(argumentValue) match {
-            case Left(error)     => IncorrectInput(error).asApplicationError.asLeft
-            case Right(dateTime) => newPrototype(dateTime = dateTime.some).asRight
+          Applicative[FF].pure {
+            MeetingDateTime(argumentValue) match {
+              case Left(error)     => IncorrectInput(error).asApplicationError.asLeft
+              case Right(dateTime) => newPrototype(dateTime = dateTime.some).asRight
+            }
           }
         case "duration" =>
-          MeetingDuration(argumentValue) match {
-            case Left(error)     => IncorrectInput(error).asApplicationError.asLeft
-            case Right(duration) => newPrototype(duration = duration.some).asRight
+          Applicative[FF].pure {
+            MeetingDuration(argumentValue) match {
+              case Left(error)     => IncorrectInput(error).asApplicationError.asLeft
+              case Right(duration) => newPrototype(duration = duration.some).asRight
+            }
           }
-        case "title"    => newPrototype(title = MeetingTitle(argumentValue).some).asRight
-        case "location" => LocationId(argumentValue) match {
-          case Left(error) => IncorrectInput(error).asApplicationError.asLeft
-          case Right(locationId) => newPrototype(locationId = locationId.some).asRight
-        }
+        case "title" => Applicative[FF].pure { newPrototype(title = MeetingTitle(argumentValue).some).asRight }
+        case "location" =>
+          Applicative[FF].pure {
+            LocationId(argumentValue) match {
+              case Left(error)       => IncorrectInput(error).asApplicationError.asLeft
+              case Right(locationId) => newPrototype(locationId = locationId.some).asRight
+            }
+          }
         case "participants" =>
           val participantStrIds: List[String] = argumentValue.split(" +").toList.filter(_ != "")
-          val participantEitherIds: List[Either[ParsingError, UserId]] = participantStrIds.map(UserId(_))
-          participantEitherIds.collectFirst { case Left(error) => error } match {
-            case None =>
-              newPrototype(
-                participants = participantEitherIds.collect { case Right(userId) => userId }.some
-              ).asRight
-            case Some(error) => IncorrectInput(error).asApplicationError.asLeft
+          val participantChatIds: List[Either[AppError, ChatId]] = participantStrIds
+            .map(ChatId(_))
+            .map({
+              case Left(error)   => IncorrectInput(error).asApplicationError.asLeft
+              case Right(chatId) => chatId.asRight
+            })
+          val participantUserIds: FF[List[Either[AppError, UserId]]] =
+            participantChatIds.map {
+              case Left(error) => Applicative[FF].pure { error.asLeft[UserId] }
+              case Right(chatId: ChatId) =>
+                commandsAwareStorage.userStorage
+                  .getUserIdByChatId(chatId)
+                  .flatMap {
+                    case None         => Applicative[FF].pure { NoSuchUserFound(chatId).asPersistenceError.asLeft[UserId] }
+                    case Some(userId) => Applicative[FF].pure { userId.asRight[AppError] }
+                  }
+            }.sequence
+          participantUserIds.flatMap { lst =>
+            Applicative[FF].pure {
+              lst.collectFirst { case Left(error) => error } match {
+                case None =>
+                  newPrototype(
+                    participants = lst.collect { case Right(userId) => userId }.some
+                  ).asRight
+                case Some(error) => error.asLeft
+              }
+            }
           }
-        case _ => IncorrectInput(s"No such argument with name $argumentName").asApplicationError.asLeft
+        case _ =>
+          Applicative[FF].pure { IncorrectInput(s"No such argument with name $argumentName").asApplicationError.asLeft }
       }
     }
   }

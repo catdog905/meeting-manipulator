@@ -1,6 +1,6 @@
 package error
 
-import domain.{MeetingId, UserId}
+import domain.{ChatId, MeetingId, UserId}
 
 import scala.language.implicitConversions
 
@@ -10,7 +10,7 @@ sealed trait StorageError {
   val message: String
   val cause: Option[Throwable] = None
 
-  val asPersistenceError: AppPersistenceError = AppPersistenceError(self)
+  val asPersistenceError: AppError = AppPersistenceError(self)
 }
 final case class NoSuchMeetingFound(message: String) extends StorageError
 
@@ -43,6 +43,7 @@ final case class NoSuchUserFound(message: String) extends StorageError
 
 object NoSuchUserFound{
   def apply(userId: UserId): NoSuchUserFound = NoSuchUserFound(s"No user with id $userId was found")
+  def apply(chatId: ChatId): NoSuchUserFound = NoSuchUserFound(s"No user with chatId $chatId was found")
 }
 
 final case class InternalStorageError(message: String) extends StorageError

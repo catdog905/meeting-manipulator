@@ -15,7 +15,7 @@ trait UserChatPool[F[_]] {
   def updatePoolByUserMessage(userId: UserId, message: Message): F[BotResponse[_]]
 }
 
-class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState])(implicit
+class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState[F]])(implicit
   val commandsAwareStorage: CommandsAwareStorage[F]
 ) extends UserChatPool[F] {
 
@@ -25,10 +25,10 @@ class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState])
         storage.addOne((userId, InactiveState(userId)))
         InactiveState(userId)
       case Some(state) => state
-    }).updateStateByMessage(message) match {
+    }).updateStateByMessage(message).flatMap {
 //      case Left(AppInteractionError(error: IncorrectInput)) =>
 //        Applicative[F].pure(Panic(error))
-      case Left(error) =>
+      case Left(error: AppError) =>
         Applicative[F].pure(Panic(error))
       case Right(ReadyToExecuteCommand(command: UserCommand[F, _])) => {
         storage.put(userId, InactiveState(userId))
@@ -41,10 +41,16 @@ class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState])
             Applicative[F].pure(CommandSummary(commandOutput)(command.showO))
         }
       }
-      case Right(state@CommandBuildingState(userId, receivingStatus: ArgumentsFetching[F, String])) =>
-        storage.put(userId, state)
-        Applicative[F].pure(ArgumentRequest(receivingStatus.prototype))
-      case Right(state) =>
+      case Right(state: CommandBuildingState[F, String]) =>
+        state.receivingStatus match{
+          case receivingStatus: ArgumentsFetching[F, String] =>
+            storage.put(userId, state)
+            Applicative[F].pure(ArgumentRequest(receivingStatus.prototype))
+          case _ => 
+            storage.put(userId, state)
+            Applicative[F].pure(NoResponse())
+        }
+      case Right(state: UserState[F]) =>
         storage.put(userId, state)
         Applicative[F].pure(NoResponse())
     }
@@ -55,6 +61,6 @@ object InMemoryUserChatPool {
   def apply[F[_]: Monad](commandsAwareStorage: CommandsAwareStorage[F]
   ): InMemoryUserChatPool[F] = {
     implicit val implicitCommandAwareStorage: CommandsAwareStorage[F] = commandsAwareStorage
-    new InMemoryUserChatPool[F](mutable.Map.empty[UserId, UserState])
+    new InMemoryUserChatPool[F](mutable.Map.empty[UserId, UserState[F]])
   }
 }

@@ -1,7 +1,7 @@
 ALTER DATABASE postgres SET intervalstyle = 'iso_8601';
 CREATE SCHEMA meeting_reminder;
 
-CREATE FUNCTION iso_8601_format(i INTERVAL)
+CREATE FUNCTION meeting_reminder.iso_8601_format(i INTERVAL)
     RETURNS TEXT
 AS $$
 BEGIN
@@ -22,8 +22,8 @@ COMMENT ON COLUMN meeting_reminder.location.link IS 'A link for connection to we
 COMMENT ON COLUMN meeting_reminder.location.address IS 'Meeting address description';
 
 CREATE TABLE meeting_reminder."user" (
-    id      int PRIMARY KEY,
-    chat_id int NOT NULL
+    id      SERIAL PRIMARY KEY,
+    chat_id int    NOT NULL
 );
 
 COMMENT ON TABLE meeting_reminder."user" IS 'Users in the system';

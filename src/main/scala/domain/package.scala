@@ -22,8 +22,6 @@ package object domain {
     def show: String = str
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class MeetingId(value: Long)
 
   object MeetingId {
@@ -33,8 +31,6 @@ package object domain {
     implicit val show: Show[MeetingId] = Show.show(meetingId => Show[Long].show(meetingId.value))
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class LocationId(value: Long)
 
   object LocationId {
@@ -43,15 +39,13 @@ package object domain {
 
     implicit def fromInt(id: Int): LocationId = LocationId(id)
     def apply(stringRepresentation: String): Either[ParsingError, LocationId] =
-      Try(stringRepresentation.toLong)match {
-        case Failure(exception) => ParsingError("MeetingHost", exception).asLeft
+      Try(stringRepresentation.toLong) match {
+        case Failure(exception) => ParsingError("LocationId", exception).asLeft
         case Success(value) => LocationId(value).asRight
       }
   }
 
-  @derive(encoder, decoder)
-  @newtype
-  case class MeetingDateTime(dateTime: ZonedDateTime)
+  final case class MeetingDateTime(dateTime: ZonedDateTime)
 
   object MeetingDateTime {
     def apply(stringRepresentation: String): Either[ParsingError, MeetingDateTime] =
@@ -66,8 +60,6 @@ package object domain {
       Format("""ZonedDateTime.java format[example = "2007-12-03T10:15:30+01:00[Europe/Paris]"]""")
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class MeetingDuration(value: Duration)
 
   object MeetingDuration {
@@ -83,8 +75,6 @@ package object domain {
     val format: Format = Format("""ISO-8601""")
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class MeetingTitle(title: String)
 
   object MeetingTitle {
@@ -93,8 +83,6 @@ package object domain {
     val format: Format = Format("String")
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class UserId(id: Long)
 
   object UserId {
@@ -111,8 +99,6 @@ package object domain {
     val format: Format = Format("Long")
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class URL(value: String)
 
   object URL {
@@ -120,8 +106,6 @@ package object domain {
     implicit val read: Read[URL] = Read[String].map(URL.apply)
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class Address(value: String)
 
   object Address {
@@ -129,8 +113,6 @@ package object domain {
     implicit val read: Read[Address] = Read[String].map(Address.apply)
   }
 
-  @derive(encoder, decoder)
-  @newtype
   case class MeetingHost(value: UserId)
 
   object MeetingHost {
@@ -142,12 +124,17 @@ package object domain {
 
   }
 
-  @derive(encoder, decoder)
-  @newtype
+
   case class ChatId(value: Long)
 
   object ChatId {
     implicit val meetingHostMeta: Meta[ChatId] = Meta[Long].timap(ChatId(_))(_.value)
     implicit val read: Read[ChatId] = Read[Long].map(ChatId.apply)
+
+    def apply(stringRepresentation: String): Either[ParsingError, ChatId] =
+      Try(stringRepresentation.toLong) match {
+        case Failure(exception) => Left(ParsingError("ChatId", exception))
+        case Success(value) => Right(ChatId(value))
+      }
   }
 }

@@ -36,7 +36,7 @@ object MeetingSql {
 
     def selectMeetingById(meetingId: MeetingId): Query0[Meeting] =
       sql"""
-           SELECT id, date_time, iso_8601_format(duration), title, location_id, host
+           SELECT id, date_time, meeting_reminder.iso_8601_format(duration), title, location_id, host
            FROM meeting_reminder.meeting
            WHERE id = $meetingId
          """.query[Meeting]

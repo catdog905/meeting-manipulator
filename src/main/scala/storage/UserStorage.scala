@@ -1,6 +1,7 @@
 package storage
 
 import cats.effect.IO
+import cats.syntax.option._
 import cats.effect.std.{Random, UUIDGen}
 import cats.implicits.catsSyntaxEitherId
 import dao.UserSql
@@ -14,22 +15,34 @@ import scala.collection.mutable
 trait UserStorage[F[_]] {
   def addUser(createUser: CreateUser): F[Either[AppError, UserId]]
   def getUserIdByChatId(chatId: ChatId): F[Option[UserId]]
-  def getUserById(userId: UserId): F[Either[AppError, User]]
+  def getUserById(userId: UserId): F[Option[User]]
   def getUsersByIds(userIds: List[UserId]): F[Either[AppError, List[User]]]
 }
 
 final case class PostgresUserStorage(userSql: UserSql, transactor: Transactor[IO]) extends UserStorage[IO] {
   override def addUser(createUser: CreateUser): IO[Either[AppError, UserId]] =
-    userSql.addNewUser(createUser).transact(transactor).attempt.map {
-      case Left(th)      => InternalError(th).asLeft
-      case Right(userId) => userId.asRight
-    }
+    for {
+      userExists <- getUserIdByChatId(createUser.chatId)
+      result <- userExists match {
+        case Some(userId) =>
+          IO.pure(Left(UserAlreadyExists(userId).asPersistenceError))
+        case None =>
+          userSql.addNewUser(createUser).transact(transactor).attempt.map {
+            case Left(th) => InternalError(th).asLeft
+            case Right(userId) => userId.asRight
+          }
+      }
+    } yield result
 
-  override def getUserById(userId: UserId): IO[Either[AppError, User]] = ???
+  override def getUserById(userId: UserId): IO[Option[User]] = ???
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] = ???
 
-  override def getUserIdByChatId(chatId: ChatId): IO[Option[UserId]] = ???
+  override def getUserIdByChatId(chatId: ChatId): IO[Option[UserId]] =
+    userSql.getUserByChatId(chatId).transact(transactor).attempt.map {
+      case Left(_)      => None
+      case Right(userId) => userId.some
+    }
 }
 
 final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random: Random[IO]) extends UserStorage[IO] {
@@ -37,7 +50,7 @@ final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random:
   override def addUser(createUser: CreateUser): IO[Either[AppError, UserId]] =
     for {
       userExists <- IO {
-        storage.find { case (_, user) => user.chatId == createUser.chat_id }
+        storage.find { case (_, user) => user.chatId == createUser.chatId }
       }
       result <- userExists match {
         case Some((userId, _)) =>
@@ -53,12 +66,9 @@ final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random:
       }
     } yield result
 
-  override def getUserById(userId: UserId): IO[Either[AppError, User]] =
+  override def getUserById(userId: UserId): IO[Option[User]] =
     IO {
-      storage.get(userId) match {
-        case Some(user) => user.asRight
-        case None       => NoSuchUserFound(userId).asPersistenceError.asLeft
-      }
+      storage.get(userId)
     }
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] =
