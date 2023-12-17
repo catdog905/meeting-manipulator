@@ -1,9 +1,19 @@
+ALTER DATABASE postgres SET intervalstyle = 'iso_8601';
 CREATE SCHEMA meeting_reminder;
+
+CREATE FUNCTION iso_8601_format(i INTERVAL)
+    RETURNS TEXT
+AS $$
+BEGIN
+    SET LOCAL intervalstyle = 'iso_8601';
+    RETURN i::TEXT;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE TABLE meeting_reminder.location (
     id SERIAL PRIMARY KEY,
-    link        varchar[],
-    address     varchar[],
+    link        varchar default NULL,
+    address     varchar default NULL,
     CONSTRAINT location_link_address_exclusivity CHECK (link is NULL or address is NULL)
 );
 
@@ -23,7 +33,7 @@ CREATE TABLE meeting_reminder.meeting (
     id          SERIAL       PRIMARY KEY,
     date_time   timestamptz  NOT NULL,
     duration    interval     NOT NULL,
-    title       varchar[]    NOT NULL,
+    title       varchar    NOT NULL,
     location_id int          NOT NULL REFERENCES meeting_reminder.location(id),
     host        int          NOT NULL REFERENCES meeting_reminder."user"(id)
 );

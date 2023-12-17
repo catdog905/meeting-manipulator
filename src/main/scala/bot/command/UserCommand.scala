@@ -13,12 +13,3 @@ trait UserCommand[+F[_], O] {
   val showO: Show[O]
   def act: F[Either[AppError, Option[O]]]
 }
-
-object UserCommand {
-  def apply[F[_]: Monad](strRepresentation: String, initiator: UserId)(implicit
-    commandsAwareStorage: CommandsAwareStorage[F]
-  ): Option[UserCommand[F, MeetingId]] = strRepresentation match {
-    case s"/new_meeting $name" => Some(ArrangeMeetingCommand(CreateMeeting(name), Nil, initiator))
-    case _ => None
-  }
-}

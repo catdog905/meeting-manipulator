@@ -31,7 +31,7 @@ object MeetingStorage {
   ): MeetingStorage[IO] = {
     val logs: Make[IO] = Logging.Make.plain[IO]
     implicit val logging: Id[Logging[IO]] = logs.forService[MeetingStorage[IO]]
-    new PostgresMeetingStorage(sql, transactor)
+    PostgresMeetingStorage(sql, transactor)
   }
 
   doobie.free.connection.WeakAsyncConnectionIO
@@ -58,7 +58,11 @@ final case class PostgresMeetingStorage(meetingSql: MeetingSql, transactor: Tran
       case Right(meetings) => meetings.asRight
     }
 
-  override def getById(meetingId: MeetingId): IO[Either[AppError, Meeting]] = IO.pure(Left(NoSuchMeetingFound(MeetingId(99)).asPersistenceError))
+  override def getById(meetingId: MeetingId): IO[Either[AppError, Meeting]] =
+    meetingSql.getMeetingById(meetingId).transact(transactor).attempt.map {
+      case Left(th) => InternalError(th).asLeft
+      case Right(meeting) => meeting.asRight
+    }
 }
 
 final case class InMemoryMeetingStorage(storage: mutable.Map[MeetingId, Meeting], random: Random[IO])

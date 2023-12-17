@@ -1,9 +1,9 @@
 package bot.command
 
-import bot.chatbased.{CommandPrototype}
+import bot.chatbased.CommandPrototype
 import cats.implicits.toFunctorOps
 import cats.{Applicative, Monad, ParallelArityFunctions, Show}
-import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, Format, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
+import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, Format, LocationId, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
 import error.{AppError, IncorrectInput, ParsingError}
 import storage.CommandsAwareStorage
 import sttp.tapir.server.interceptor.RequestResult.Failure
@@ -23,8 +23,8 @@ final case class ArrangeMeetingCommand[F[_]: Monad](
         CreateMeetingWithParticipants(createMeeting, participants)
       )
       .map {
-        case Left(error: AppError)      => Left(error)
-        case Right(meetingId) => Right(Some(meetingId))
+        case Left(error: AppError) => Left(error)
+        case Right(meetingId)      => Right(Some(meetingId))
       }
 
   override val showO: Show[MeetingId] = Show[MeetingId]
@@ -35,21 +35,21 @@ object ArrangeMeetingCommand {
     dateTime: Option[MeetingDateTime] = None,
     duration: Option[MeetingDuration] = None,
     title: Option[MeetingTitle] = None,
-    location: Option[MeetingLocation] = None,
+    location: Option[LocationId] = None,
     participants: Option[List[UserId]] = None
   )(implicit val commandsAwareStorage: CommandsAwareStorage[FF])
     extends CommandPrototype[FF, MeetingId] {
 
     override def build(initiator: UserId): Option[UserCommand[FF, MeetingId]] =
       (dateTime, duration, title, location, participants) match {
-        case (Some(datetime), Some(duration), Some(title), Some(location), Some(participants)) =>
+        case (Some(datetime), Some(duration), Some(title), Some(locationId), Some(participants)) =>
           Some(
             ArrangeMeetingCommand[FF](
               CreateMeeting(
                 datetime,
                 duration,
                 title,
-                location,
+                locationId,
                 MeetingHost(initiator)
               ),
               participants,
@@ -96,14 +96,14 @@ object ArrangeMeetingCommand {
         dateTime: Option[MeetingDateTime] = dateTime,
         duration: Option[MeetingDuration] = duration,
         title: Option[MeetingTitle] = title,
-        location: Option[MeetingLocation] = location,
+        locationId: Option[LocationId] = location,
         participants: Option[List[UserId]] = participants
       ): ArrangeMeetingCommandPrototype[FF] =
         ArrangeMeetingCommandPrototype(
           dateTime,
           duration,
           title,
-          location,
+          locationId,
           participants
         )
       argumentName match {
@@ -118,7 +118,10 @@ object ArrangeMeetingCommand {
             case Right(duration) => newPrototype(duration = duration.some).asRight
           }
         case "title"    => newPrototype(title = MeetingTitle(argumentValue).some).asRight
-        case "location" => newPrototype(location = MeetingLocation(argumentValue).some).asRight
+        case "location" => LocationId(argumentValue) match {
+          case Left(error) => IncorrectInput(error).asApplicationError.asLeft
+          case Right(locationId) => newPrototype(locationId = locationId.some).asRight
+        }
         case "participants" =>
           val participantStrIds: List[String] = argumentValue.split(" +").toList.filter(_ != "")
           val participantEitherIds: List[Either[ParsingError, UserId]] = participantStrIds.map(UserId(_))

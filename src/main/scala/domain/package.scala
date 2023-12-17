@@ -13,6 +13,8 @@ import scala.util.{Failure, Success, Try}
 import cats.syntax.all._
 import com.bot4s.telegram.models.ChatId
 
+import java.time.format.DateTimeFormatter
+
 package object domain {
 
   case class Format(str: String)
@@ -40,6 +42,11 @@ package object domain {
     implicit val read: Read[LocationId] = Read[Long].map(LocationId.apply)
 
     implicit def fromInt(id: Int): LocationId = LocationId(id)
+    def apply(stringRepresentation: String): Either[ParsingError, LocationId] =
+      Try(stringRepresentation.toLong)match {
+        case Failure(exception) => ParsingError("MeetingHost", exception).asLeft
+        case Success(value) => LocationId(value).asRight
+      }
   }
 
   @derive(encoder, decoder)
@@ -61,18 +68,19 @@ package object domain {
 
   @derive(encoder, decoder)
   @newtype
-  case class MeetingDuration(value: Period)
+  case class MeetingDuration(value: Duration)
 
   object MeetingDuration {
     def apply(stringRepresentation: String): Either[ParsingError, MeetingDuration] =
-      Try(Period.parse(stringRepresentation)) match {
+      Try(Duration.parse(stringRepresentation)) match {
         case Success(value) => MeetingDuration(value).asRight
         case Failure(exception) => ParsingError("MeetingDuration", exception).asLeft
       }
 
-    implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[Int].timap(_ => MeetingDuration(Period.ofDays(1)))(_ => 1) //TODO: fix
-    implicit val read: Read[MeetingDuration] = Read[Int].map(_ => MeetingDuration(Period.ofDays(1))) //TODO: fix
-    val format: Format = Format("""Period.java format[example = "P1Y2M3D"]""")
+    implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[String].timap(raw =>
+      MeetingDuration(Duration.parse(raw)))(meetingDuration => meetingDuration.value.toString)
+    implicit val read: Read[MeetingDuration] = Read[String].map(raw => MeetingDuration(Duration.parse(raw)))
+    val format: Format = Format("""ISO-8601""")
   }
 
   @derive(encoder, decoder)

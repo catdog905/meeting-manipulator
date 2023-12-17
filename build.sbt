@@ -48,6 +48,7 @@ lazy val root = (project in file("."))
       "com.github.pureconfig" %% "pureconfig" % "0.17.4",
       "org.http4s" %% "http4s-ember-server" % "0.23.19",
       "org.scalatest" %% "scalatest" % "3.2.15" % Test,
+      "org.typelevel"  %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
       "com.bot4s" %% "telegram-core" % "5.6.3",
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % SttpVersion,
       "io.github.liquibase4s" %% "liquibase4s-core" % "1.0.0",
@@ -56,7 +57,9 @@ lazy val root = (project in file("."))
       "com.opentable.components" % "otj-pg-embedded" % "1.0.1" % Test,
       "com.h2database" % "h2" % "2.1.214" % Test,
       "com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.9.2",
-      "dev.bgahagan" %% "scala-regex-interpolation" % "1.0.0"
+      "dev.bgahagan" %% "scala-regex-interpolation" % "1.0.0",
+      "org.testcontainers" % "testcontainers" % "1.17.6" % Test,
+      "org.testcontainers" % "postgresql"     % "1.17.6" % Test
     ),
     dependencyOverrides += "io.circe" %% "circe-core" % "0.14.5",
     scalacOptions ++= Seq("-Ymacro-annotations")
