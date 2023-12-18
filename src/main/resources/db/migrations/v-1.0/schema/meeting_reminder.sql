@@ -12,13 +12,13 @@ $$ LANGUAGE plpgsql;
 
 CREATE TABLE meeting_reminder.location (
     id SERIAL PRIMARY KEY,
-    link        varchar default NULL,
-    address     varchar default NULL,
-    CONSTRAINT location_link_address_exclusivity CHECK (link is NULL or address is NULL)
+    -- link        varchar default NULL,
+    address     varchar default NULL -- ,
+    -- CONSTRAINT location_link_address_exclusivity CHECK (link is NULL or address is NULL)
 );
 
 COMMENT ON TABLE meeting_reminder.location IS 'Meeting location (online or offline)';
-COMMENT ON COLUMN meeting_reminder.location.link IS 'A link for connection to web meeting';
+-- COMMENT ON COLUMN meeting_reminder.location.link IS 'A link for connection to web meeting';
 COMMENT ON COLUMN meeting_reminder.location.address IS 'Meeting address description';
 
 CREATE TABLE meeting_reminder."user" (

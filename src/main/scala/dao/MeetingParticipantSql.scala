@@ -8,7 +8,7 @@ import doobie.implicits._
 trait MeetingParticipantSql {
   def addMeetingParticipants(meetingId: MeetingId, users: Seq[UserId]): ConnectionIO[Unit]
 
-  def getMeetingParticipants(meetingId: MeetingId): ConnectionIO[List[User]]
+  def getMeetingParticipants(meetingId: MeetingId): ConnectionIO[List[UserId]]
 }
 
 object MeetingParticipantSql {
@@ -17,16 +17,15 @@ object MeetingParticipantSql {
     def insertMeetingParticipants(meetingId: MeetingId, users: Seq[UserId]): Update[(MeetingId, UserId)] =
       Update[(MeetingId, UserId)]("""
            INSERT INTO meeting_reminder.meeting_participant
-           VALUES (meeting_id, user_id)
+           VALUES (?, ?)
          """)
 
-    def selectMeetingParticipants(meetingId: MeetingId): Query0[User] =
+    def selectMeetingParticipants(meetingId: MeetingId): Query0[UserId] =
       sql"""
-           SELECT u.id
+           SELECT user_id
            FROM meeting_reminder.meeting_participant
-           LEFT JOIN meeting_reminder."user" u on u.id = meeting_participant.user_id
-           WHERE meeting_id == $meetingId
-         """.query[User]
+           WHERE meeting_id = $meetingId
+         """.query[UserId]
   }
 
   private final class Impl extends MeetingParticipantSql {
@@ -37,7 +36,7 @@ object MeetingParticipantSql {
         .updateMany(users.map((meetingId, _)))
         .flatMap(_ => ().pure[ConnectionIO])
 
-    override def getMeetingParticipants(meetingId: MeetingId): ConnectionIO[List[User]] = {
+    override def getMeetingParticipants(meetingId: MeetingId): ConnectionIO[List[UserId]] = {
       selectMeetingParticipants(meetingId).to[List]
     }
   }

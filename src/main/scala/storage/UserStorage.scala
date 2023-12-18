@@ -15,7 +15,7 @@ import scala.collection.mutable
 trait UserStorage[F[_]] {
   def addUser(createUser: CreateUser): F[Either[AppError, UserId]]
   def getUserIdByChatId(chatId: ChatId): F[Option[UserId]]
-  def getUserById(userId: UserId): F[Option[User]]
+  def getUserById(userId: UserId): F[Either[AppError, Option[User]]]
   def getUsersByIds(userIds: List[UserId]): F[Either[AppError, List[User]]]
 }
 
@@ -34,7 +34,11 @@ final case class PostgresUserStorage(userSql: UserSql, transactor: Transactor[IO
       }
     } yield result
 
-  override def getUserById(userId: UserId): IO[Option[User]] = ???
+  override def getUserById(userId: UserId): IO[Either[AppError, Option[User]]] =
+    userSql.getUserById(userId).transact(transactor).attempt.map {
+      case Left(th) => InternalError(th).asLeft
+      case Right(option) => option.asRight
+    }
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] = ???
 
@@ -66,10 +70,8 @@ final case class InMemoryUserStorage(storage: mutable.Map[UserId, User], random:
       }
     } yield result
 
-  override def getUserById(userId: UserId): IO[Option[User]] =
-    IO {
-      storage.get(userId)
-    }
+  override def getUserById(userId: UserId): IO[Either[AppError, Option[User]]] =
+    ???
 
   override def getUsersByIds(userIds: List[UserId]): IO[Either[AppError, List[User]]] =
     IO { storage.filter({ case (id, _) => userIds.contains(id) }).values.toList.asRight }

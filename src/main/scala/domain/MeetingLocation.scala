@@ -12,10 +12,12 @@ object MeetingLocation {
 
   // This implicit Get instance will handle the conversion from the database representation to Location
   implicit val metaLocation: Meta[MeetingLocation] = Meta[String]
-    .timap[MeetingLocation](a => OnlineMeetingLocation(URL(a), 0))(_.toString)
+    .timap[MeetingLocation](a => OfflineMeetingLocation(Address(a), 0)) {
+      case OfflineMeetingLocation(Address(address), id) => address
+    }
   val format: Format = Format("String")
 }
 
-case class OnlineMeetingLocation(url: URL, id: LocationId) extends MeetingLocation
+//case class OnlineMeetingLocation(url: URL, id: LocationId) extends MeetingLocation
 
 case class OfflineMeetingLocation(address: Address, id: LocationId) extends MeetingLocation

@@ -7,6 +7,7 @@ import doobie.implicits._
 trait UserSql {
   def addNewUser(createUser: CreateUser): ConnectionIO[UserId]
   def getUserByChatId(chatId: ChatId): ConnectionIO[UserId]
+  def getUserById(id: UserId): ConnectionIO[Option[User]]
 }
 
 object UserSql {
@@ -24,6 +25,13 @@ object UserSql {
            FROM meeting_reminder."user"
            WHERE chat_id = $chatId
          """.query[UserId]
+
+    def selectUserById(userId: UserId): Query0[User] =
+      sql"""
+           SELECT id, chat_id
+           FROM meeting_reminder."user"
+           WHERE id = $userId
+         """.query[User]
   }
 
   private final class Impl extends UserSql {
@@ -36,6 +44,9 @@ object UserSql {
 
     override def getUserByChatId(chatId: ChatId): doobie.ConnectionIO[UserId] =
       selectUserIdByChatId(chatId).unique
+
+    override def getUserById(id: UserId): doobie.ConnectionIO[Option[User]] =
+      selectUserById(id).option
   }
 
   def make: UserSql = new Impl

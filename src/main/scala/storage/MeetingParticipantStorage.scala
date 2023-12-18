@@ -3,8 +3,12 @@ package storage
 import cats.effect.IO
 import cats.effect.std.Random
 import domain._
-import error.{AppError, InternalError, InternalStorageError, NoSuchMeetingFound, AppPersistenceError, UserAlreadyJoinedMeeting, UsersAlreadyJoinedMeeting}
+import error.{AppError, AppPersistenceError, InternalError, InternalStorageError, NoSuchMeetingFound, UserAlreadyJoinedMeeting, UsersAlreadyJoinedMeeting}
 import cats.syntax.either._
+import dao.MeetingParticipantSql
+import doobie.Transactor
+
+import doobie.implicits._
 
 import collection.mutable.Map
 import scala.collection.mutable
@@ -17,6 +21,34 @@ trait MeetingParticipantStorage[F[_]] {
   def removeMeetingParticipant(userId: UserId, meetingId: MeetingId): F[Either[AppError, Unit]]
   def removeMeetingParticipants(userIds: List[UserId], meetingId: MeetingId): F[Either[AppError, Unit]]
   def removeMeetingParticipants(meetingId: MeetingId): F[Either[AppError, Unit]]
+}
+
+final case class PostgresMeetingParticipantStorage(
+  meetingParticipantSql: MeetingParticipantSql,
+  transactor: Transactor[IO]
+) extends MeetingParticipantStorage[IO] {
+
+  override def getMeetingParticipants(meetingId: MeetingId): IO[Either[AppError, List[UserId]]] =
+    meetingParticipantSql.getMeetingParticipants(meetingId).transact(transactor).attempt.map {
+      case Left(th)                   => InternalError(th).asLeft
+      case Right(meetingParticipants) => meetingParticipants.asRight
+    }
+
+  override def addMeetingParticipant(meetingId: MeetingId, userId: UserId): IO[Either[AppError, Unit]] = ???
+
+  override def addMeetingParticipants(meetingId: MeetingId, participants: List[UserId]): IO[Either[AppError, Unit]] =
+    meetingParticipantSql.addMeetingParticipants(meetingId, participants).transact(transactor).attempt.map {
+      case Left(th) => InternalError(th).asLeft
+      case Right(()) => ().asRight
+    }
+
+  override def getMeetingsWithParticipant(userId: UserId): IO[Either[AppError, List[MeetingId]]] = ???
+
+  override def removeMeetingParticipant(userId: UserId, meetingId: MeetingId): IO[Either[AppError, Unit]] = ???
+
+  override def removeMeetingParticipants(userIds: List[UserId], meetingId: MeetingId): IO[Either[AppError, Unit]] = ???
+
+  override def removeMeetingParticipants(meetingId: MeetingId): IO[Either[AppError, Unit]] = ???
 }
 
 final case class InMemoryMeetingParticipantStorage(storage: mutable.Map[MeetingId, List[UserId]])
