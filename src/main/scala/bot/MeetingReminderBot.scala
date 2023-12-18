@@ -1,22 +1,19 @@
 package bot
 
-import bot.chatbased.{BotResponse, InMemoryUserChatPool, Panic, UserChatPool}
-import bot.command.UserCommand
-import cats.{Applicative, Monad}
-import cats.effect.unsafe.implicits.global
-import cats.effect.{Async, IO}
-import cats.syntax.functor._
+import bot.chatbased.{BotResponse, InMemoryUserChatPool, Panic}
+import cats.Applicative
+import cats.effect.Async
+import cats.implicits.toFunctorOps
+import cats.syntax.all._
 import com.bot4s.telegram.cats.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
-import domain.{ChatId, UserId}
-import storage.{CommandsAwareStorage, MeetingStorage}
-import sttp.client3.SttpBackend
-import cats.syntax.all._
 import com.bot4s.telegram.models.Message
+import domain.ChatId
 import error.AppError
-import cats.implicits.toFunctorOps
+import storage.CommandsAwareStorage
+import sttp.client3.SttpBackend
 
-case class MeetingReminderBot[F[_]: Monad : Async](
+case class MeetingReminderBot[F[_]: Async](
   token: String,
   backend: SttpBackend[F, Any],
   commandsAwareStorage: CommandsAwareStorage[F]
@@ -35,10 +32,15 @@ case class MeetingReminderBot[F[_]: Monad : Async](
         }
       } yield botResponse
 
-    val sendMessageF: BotResponse[_] => F[Unit] = botResponse =>
-      request(SendMessage(msg.source, botResponse.show)).void
+    val sendMessageF: BotResponse[_] => F[Unit] = botResponse => request(SendMessage(msg.source, botResponse.show)).void
 
     response(msg).flatMap(sendMessageF)
   }
 
+  def notifier(sleeper: F[Unit]): F[Unit] =
+    for {
+      _ <- sleeper
+      _ <- request(SendMessage(407956969, "hello"))
+      _ <- notifier(sleeper)
+    } yield ()
 }

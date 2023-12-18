@@ -2,8 +2,6 @@ package error
 
 import domain.{ChatId, MeetingId, UserId}
 
-import scala.language.implicitConversions
-
 sealed trait StorageError {
   self =>
 

@@ -1,12 +1,12 @@
 package bot.chatbased
 
 import bot.command.UserCommand
-import cats.{Applicative, FlatMap, Monad, Show}
+import cats.syntax.all._
+import cats.{Applicative, Monad}
 import com.bot4s.telegram.models.Message
 import domain.UserId
-import error.{AppError, AppInteractionError, IncorrectInput}
+import error.AppError
 import storage.CommandsAwareStorage
-import cats.syntax.all._
 
 import scala.collection.mutable
 
@@ -41,11 +41,11 @@ class InMemoryUserChatPool[F[_]: Monad](storage: mutable.Map[UserId, UserState[F
             Applicative[F].pure(CommandSummary(commandOutput)(command.showO))
         }
       }
-      case Right(state: CommandBuildingState[F, String]) =>
+      case Right(state: CommandBuildingState[_, _]) =>
         state.receivingStatus match{
-          case receivingStatus: ArgumentsFetching[F, String] =>
+          case receivingStatus: ArgumentsFetching[_, _] =>
             storage.put(userId, state)
-            Applicative[F].pure(ArgumentRequest(receivingStatus.prototype))
+            Applicative[F].pure(ArgumentRequest(receivingStatus.prototype.asInstanceOf[CommandPrototype[F, String]]))
           case _ => 
             storage.put(userId, state)
             Applicative[F].pure(NoResponse())

@@ -1,14 +1,13 @@
 package bot.chatbased
 
 import bot.command.ArrangeMeetingCommand.ArrangeMeetingCommandPrototype
-import bot.command.{ArrangeMeetingCommand, UserCommand}
-import cats.{Applicative, Monad}
+import bot.command.UserCommand
 import cats.implicits.{catsSyntaxEitherId, toFlatMapOps}
+import cats.{Applicative, Monad}
 import com.bot4s.telegram.models.Message
+import domain.UserId
 import error.{AppError, IncorrectInput}
 import storage.CommandsAwareStorage
-import dev.bgahagan.regex.intrpl._
-import domain.UserId
 
 sealed trait UserState[F[_]] {
   def updateStateByMessage(message: Message): F[Either[AppError, UserState[F]]]

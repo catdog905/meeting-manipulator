@@ -1,8 +1,5 @@
 import bot.MeetingReminderBot
-import bot.chatbased.InMemoryUserChatPool
-import cats.effect.std.Random
 import cats.effect.{ExitCode, IO, IOApp, Resource}
-import com.bot4s.telegram.methods.SendMessage
 import config.AppConfig
 import dao.{MeetingParticipantSql, MeetingSql, UserSql}
 import doobie.Transactor
@@ -11,8 +8,10 @@ import io.github.liquibase4s.cats.CatsMigrationHandler._
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import org.asynchttpclient.Dsl.asyncHttpClient
 import org.asynchttpclient.proxy.ProxyServer
-import storage.{CommandsAwareStorage, InMemoryMeetingParticipantStorage, InMemoryMeetingStorage, InMemoryUserStorage, MeetingStorage, PostgresMeetingParticipantStorage, PostgresMeetingStorage, PostgresUserStorage}
+import storage._
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
+
+import scala.concurrent.duration.DurationInt
 
 object Main extends IOApp {
 
@@ -38,9 +37,7 @@ object Main extends IOApp {
             .build()
         )
       )
-
-      random <- Random.scalaUtilRandom[IO].toResource
-      bot <- MeetingReminderBot[IO](
+      bot = MeetingReminderBot[IO](
         config.bot.token,
         telegramBotBackend,
         CommandsAwareStorage[IO](
@@ -49,10 +46,11 @@ object Main extends IOApp {
           PostgresMeetingParticipantStorage(MeetingParticipantSql.make, transactor)
         )
       )
-        .startPolling()
-        .toResource
+
+      _ <- bot.notifier(IO.sleep(1.second)).start.toResource
+      _ <- bot.startPolling().toResource
       /*_ <- MeetingReminderBot(config.bot.token, telegramBotBackend, storage)
-        .request(
+        .request(user
           SendMessage(
             1399878184,
             "Intentional message"

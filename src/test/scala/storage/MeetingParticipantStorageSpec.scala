@@ -2,16 +2,15 @@ package storage
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
+import cats.implicits._
 import dao.{MeetingParticipantSql, MeetingSql, UserSql}
-import domain.{ChatId, CreateMeeting, CreateUser, LocationId, Meeting, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingTitle, UserId}
-import doobie.implicits.toSqlInterpolator
+import domain._
+import doobie.implicits._
 import error.AppError
 import io.github.liquibase4s.cats.CatsMigrationHandler.liquibaseHandlerForCats
 import org.scalatest.BeforeAndAfter
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.should.Matchers
-import doobie.implicits._
-import cats.implicits._
 
 import java.time.{Duration, Period, ZoneId, ZonedDateTime}
 

@@ -14,7 +14,7 @@ trait MeetingParticipantSql {
 object MeetingParticipantSql {
   object sqls {
 
-    def insertMeetingParticipants(meetingId: MeetingId, users: Seq[UserId]): Update[(MeetingId, UserId)] =
+    def insertMeetingParticipants: Update[(MeetingId, UserId)] =
       Update[(MeetingId, UserId)]("""
            INSERT INTO meeting_reminder.meeting_participant
            VALUES (?, ?)
@@ -32,7 +32,7 @@ object MeetingParticipantSql {
     import sqls._
 
     override def addMeetingParticipants(meetingId: MeetingId, users: Seq[UserId]): ConnectionIO[Unit] =
-      insertMeetingParticipants(meetingId, users)
+      insertMeetingParticipants
         .updateMany(users.map((meetingId, _)))
         .flatMap(_ => ().pure[ConnectionIO])
 

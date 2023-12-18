@@ -1,14 +1,14 @@
 package storage
 
 import cats.effect.IO
-import cats.syntax.option._
-import cats.effect.std.{Random, UUIDGen}
+import cats.effect.std.Random
 import cats.implicits.catsSyntaxEitherId
+import cats.syntax.option._
 import dao.UserSql
 import domain.{ChatId, CreateUser, User, UserId}
 import doobie.Transactor
 import doobie.implicits._
-import error.{AppError, InternalError, NoSuchUserFound, StorageError, UserAlreadyExists, UserAlreadyJoinedMeeting}
+import error.{AppError, InternalError, UserAlreadyExists}
 
 import scala.collection.mutable
 

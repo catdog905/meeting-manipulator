@@ -1,18 +1,13 @@
 package storage
 
-import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
-import dao.{MeetingSql, UserSql}
-import domain.{ChatId, CreateMeeting, CreateUser, LocationId, Meeting, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingTitle, UserId}
-import doobie.implicits.toSqlInterpolator
-import error.AppError
+import dao.UserSql
+import domain.{ChatId, CreateUser, UserId}
+import doobie.implicits._
 import io.github.liquibase4s.cats.CatsMigrationHandler.liquibaseHandlerForCats
 import org.scalatest.BeforeAndAfter
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.should.Matchers
-import doobie.implicits._
-
-import java.time.{Duration, Period, ZoneId, ZonedDateTime}
 
 class UserStorageSpec extends AsyncFreeSpec with AsyncIOSpec with BeforeAndAfter with Matchers {
 

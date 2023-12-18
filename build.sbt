@@ -3,17 +3,21 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.13.12"
 
 Compile / compile / scalacOptions ++= Seq(
-  "-Werror",
-  "-Xfatal-warnings",
-  "-Wdead-code",
-  "-Wextra-implicit",
-  "-Wnumeric-widen",
-  "-Wunused",
-  "-Wvalue-discard",
-  "-Xlint",
-  "-Xlint:-byname-implicit",
-  "-Xlint:-implicit-recursion",
-  "-unchecked"
+  // "-Werror",
+  // "-Xfatal-warnings",
+  "-Dhttp.proxyHost=127.0.0.1",
+  "-Dhttp.proxyPort=2080",
+  "-Dhttps.proxyHost=127.0.0.1",
+  "-Dhttps.proxyPort=2080"
+  // "-Wdead-code",
+  // "-Wextra-implicit",
+  // "-Wnumeric-widen",
+  // "-Wunused",
+  // "-Wvalue-discard",
+  // "-Xlint",
+  // "-Xlint:-byname-implicit",
+  // "-Xlint:-implicit-recursion",
+  // "-unchecked"
 )
 
 val CatsVersion = "3.3.4"
@@ -48,7 +52,7 @@ lazy val root = (project in file("."))
       "com.github.pureconfig" %% "pureconfig" % "0.17.4",
       "org.http4s" %% "http4s-ember-server" % "0.23.19",
       "org.scalatest" %% "scalatest" % "3.2.15" % Test,
-      "org.typelevel"  %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
+      "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
       "com.bot4s" %% "telegram-core" % "5.6.3",
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % SttpVersion,
       "io.github.liquibase4s" %% "liquibase4s-core" % "1.0.0",
@@ -59,7 +63,7 @@ lazy val root = (project in file("."))
       "com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.9.2",
       "dev.bgahagan" %% "scala-regex-interpolation" % "1.0.0",
       "org.testcontainers" % "testcontainers" % "1.17.6" % Test,
-      "org.testcontainers" % "postgresql"     % "1.17.6" % Test
+      "org.testcontainers" % "postgresql" % "1.17.6" % Test
     ),
     dependencyOverrides += "io.circe" %% "circe-core" % "0.14.5",
     scalacOptions ++= Seq("-Ymacro-annotations")

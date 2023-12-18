@@ -1,16 +1,13 @@
 package storage
 
 import cats.effect.IO
-import cats.effect.std.Random
-import domain._
-import error.{AppError, AppPersistenceError, InternalError, InternalStorageError, NoSuchMeetingFound, UserAlreadyJoinedMeeting, UsersAlreadyJoinedMeeting}
 import cats.syntax.either._
 import dao.MeetingParticipantSql
+import domain._
 import doobie.Transactor
-
 import doobie.implicits._
+import error.{AppError, InternalError, NoSuchMeetingFound, UsersAlreadyJoinedMeeting}
 
-import collection.mutable.Map
 import scala.collection.mutable
 
 trait MeetingParticipantStorage[F[_]] {

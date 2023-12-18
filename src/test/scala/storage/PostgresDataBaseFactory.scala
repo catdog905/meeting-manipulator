@@ -1,8 +1,8 @@
 package storage
 
 import cats.effect.{IO, Resource}
-import doobie.{ExecutionContexts, Transactor}
 import doobie.hikari.HikariTransactor
+import doobie.{ExecutionContexts, Transactor}
 import io.github.liquibase4s.{Liquibase, LiquibaseConfig, MigrationHandler}
 import org.testcontainers.containers.PostgreSQLContainer
 

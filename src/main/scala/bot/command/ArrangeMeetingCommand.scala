@@ -2,14 +2,11 @@ package bot.command
 
 import bot.chatbased.CommandPrototype
 import cats.implicits.toFunctorOps
-import cats.{Applicative, Monad, ParallelArityFunctions, Show}
-import domain.{ChatId, CreateMeeting, CreateMeetingWithParticipants, Format, LocationId, MeetingDateTime, MeetingDuration, MeetingHost, MeetingId, MeetingLocation, MeetingTitle, UserId}
-import error.{AppError, IncorrectInput, NoSuchUserFound, ParsingError}
-import storage.CommandsAwareStorage
-import sttp.tapir.server.interceptor.RequestResult.Failure
 import cats.syntax.all._
-
-import scala.util.Try
+import cats.{Applicative, Monad, Show}
+import domain._
+import error.{AppError, IncorrectInput, NoSuchUserFound}
+import storage.CommandsAwareStorage
 
 final case class ArrangeMeetingCommand[F[_]: Monad](
   createMeeting: CreateMeeting,

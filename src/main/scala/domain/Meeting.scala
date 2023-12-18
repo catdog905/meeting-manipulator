@@ -1,7 +1,5 @@
 package domain
 
-import java.time.{Period, ZonedDateTime}
-
 final case class Meeting(
   id: MeetingId,
   dateTime: MeetingDateTime,

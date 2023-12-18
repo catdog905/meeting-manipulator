@@ -1,6 +1,5 @@
 package storage
 
-import cats.Id
 import cats.effect.IO
 import cats.effect.std.Random
 import cats.syntax.either._
@@ -9,11 +8,7 @@ import domain._
 import doobie._
 import doobie.implicits._
 import error.{AppError, InternalError, NoSuchMeetingFound}
-import tofu.logging.Logging
-import tofu.logging.Logging.Make
-import cats.syntax.flatMap._
 
-import scala.Predef.->
 import scala.collection.mutable
 
 trait MeetingStorage[F[_]] {
@@ -29,12 +24,8 @@ object MeetingStorage {
     sql: MeetingSql,
     transactor: Transactor[IO]
   ): MeetingStorage[IO] = {
-    val logs: Make[IO] = Logging.Make.plain[IO]
-    implicit val logging: Id[Logging[IO]] = logs.forService[MeetingStorage[IO]]
     PostgresMeetingStorage(sql, transactor)
   }
-
-  doobie.free.connection.WeakAsyncConnectionIO
 }
 
 final case class PostgresMeetingStorage(meetingSql: MeetingSql, transactor: Transactor[IO]) extends MeetingStorage[IO] {
@@ -60,7 +51,7 @@ final case class PostgresMeetingStorage(meetingSql: MeetingSql, transactor: Tran
 
   override def getById(meetingId: MeetingId): IO[Either[AppError, Meeting]] =
     meetingSql.getMeetingById(meetingId).transact(transactor).attempt.map {
-      case Left(th) => InternalError(th).asLeft
+      case Left(th)       => InternalError(th).asLeft
       case Right(meeting) => meeting.asRight
     }
 }
@@ -91,10 +82,12 @@ final case class InMemoryMeetingStorage(storage: mutable.Map[MeetingId, Meeting]
     }
 
   override def getById(meetingId: MeetingId): IO[Either[AppError, Meeting]] =
-    IO { storage.get(meetingId) match {
-      case Some(meeting) => meeting.asRight
-      case None => NoSuchMeetingFound(meetingId).asPersistenceError.asLeft
-    }}
+    IO {
+      storage.get(meetingId) match {
+        case Some(meeting) => meeting.asRight
+        case None          => NoSuchMeetingFound(meetingId).asPersistenceError.asLeft
+      }
+    }
 }
 
 object InMemoryMeetingStorage {

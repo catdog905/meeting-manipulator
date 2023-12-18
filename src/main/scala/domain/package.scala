@@ -1,140 +1,129 @@
+package domain
 
 import cats.Show
-import derevo.circe.{decoder, encoder}
-import derevo.derive
+import cats.syntax.all._
 import doobie.postgres.implicits._
 import doobie.{Meta, Read}
-import error.{AppError, ParsingError}
-import io.estatico.newtype.macros.newtype
+import error.ParsingError
 
-import java.time.{Duration, Period, ZonedDateTime}
+import java.time.{Duration, ZonedDateTime}
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
-import cats.syntax.all._
-import com.bot4s.telegram.models.ChatId
 
-import java.time.format.DateTimeFormatter
+case class Format(str: String) {
+  def show: String = str
+}
 
-package object domain {
+case class MeetingId(value: Long)
 
-  case class Format(str: String)
-  {
-    def show: String = str
-  }
+object MeetingId {
+  implicit val meetingIdMeta: Meta[MeetingId] = Meta[Long].timap(MeetingId(_))(_.value)
+  implicit val read: Read[MeetingId] = Read[Long].map(MeetingId.apply)
 
-  case class MeetingId(value: Long)
+  implicit val show: Show[MeetingId] = Show.show(meetingId => Show[Long].show(meetingId.value))
+}
 
-  object MeetingId {
-    implicit val meetingIdMeta: Meta[MeetingId] = Meta[Long].timap(MeetingId(_))(_.value)
-    implicit val read: Read[MeetingId] = Read[Long].map(MeetingId.apply)
+case class LocationId(value: Long)
 
-    implicit val show: Show[MeetingId] = Show.show(meetingId => Show[Long].show(meetingId.value))
-  }
+object LocationId {
+  implicit val locationIdMeta: Meta[LocationId] = Meta[Long].timap(LocationId(_))(_.value)
+  implicit val read: Read[LocationId] = Read[Long].map(LocationId.apply)
 
-  case class LocationId(value: Long)
+  implicit def fromInt(id: Int): LocationId = LocationId(id.toLong)
+  def apply(stringRepresentation: String): Either[ParsingError, LocationId] =
+    Try(stringRepresentation.toLong) match {
+      case Failure(exception) => ParsingError("LocationId", exception).asLeft
+      case Success(value)     => LocationId(value).asRight
+    }
+}
 
-  object LocationId {
-    implicit val locationIdMeta: Meta[LocationId] = Meta[Long].timap(LocationId(_))(_.value)
-    implicit val read: Read[LocationId] = Read[Long].map(LocationId.apply)
+final case class MeetingDateTime(dateTime: ZonedDateTime)
 
-    implicit def fromInt(id: Int): LocationId = LocationId(id)
-    def apply(stringRepresentation: String): Either[ParsingError, LocationId] =
-      Try(stringRepresentation.toLong) match {
-        case Failure(exception) => ParsingError("LocationId", exception).asLeft
-        case Success(value) => LocationId(value).asRight
-      }
-  }
+object MeetingDateTime {
+  def apply(stringRepresentation: String): Either[ParsingError, MeetingDateTime] =
+    Try(ZonedDateTime.parse(stringRepresentation)) match {
+      case Success(zonedDateTime) => MeetingDateTime(zonedDateTime).asRight
+      case Failure(exception)     => ParsingError("MeetingDateTime", exception).asLeft
+    }
 
-  final case class MeetingDateTime(dateTime: ZonedDateTime)
+  implicit val meetingDateTimeMeta: Meta[MeetingDateTime] = Meta[ZonedDateTime].timap(MeetingDateTime(_))(_.dateTime)
+  implicit val read: Read[MeetingDateTime] = Read[ZonedDateTime].map(MeetingDateTime.apply)
+  implicit val format: Format =
+    Format("""ZonedDateTime.java format[example = "2007-12-03T10:15:30+01:00[Europe/Paris]"]""")
+}
 
-  object MeetingDateTime {
-    def apply(stringRepresentation: String): Either[ParsingError, MeetingDateTime] =
-      Try(ZonedDateTime.parse(stringRepresentation)) match {
-        case Success(zonedDateTime) => MeetingDateTime(zonedDateTime).asRight
-        case Failure(exception) => ParsingError("MeetingDateTime", exception).asLeft
-      }
+case class MeetingDuration(value: Duration)
 
-    implicit val meetingDateTimeMeta: Meta[MeetingDateTime] = Meta[ZonedDateTime].timap(MeetingDateTime(_))(_.dateTime)
-    implicit val read: Read[MeetingDateTime] = Read[ZonedDateTime].map(MeetingDateTime.apply)
-    implicit val format: Format =
-      Format("""ZonedDateTime.java format[example = "2007-12-03T10:15:30+01:00[Europe/Paris]"]""")
-  }
+object MeetingDuration {
+  def apply(stringRepresentation: String): Either[ParsingError, MeetingDuration] =
+    Try(Duration.parse(stringRepresentation)) match {
+      case Success(value)     => MeetingDuration(value).asRight
+      case Failure(exception) => ParsingError("MeetingDuration", exception).asLeft
+    }
 
-  case class MeetingDuration(value: Duration)
+  implicit val meetingHostMeta: Meta[MeetingDuration] =
+    Meta[String].timap(raw => MeetingDuration(Duration.parse(raw)))(meetingDuration => meetingDuration.value.toString)
+  implicit val read: Read[MeetingDuration] = Read[String].map(raw => MeetingDuration(Duration.parse(raw)))
+  val format: Format = Format("""ISO-8601""")
+}
 
-  object MeetingDuration {
-    def apply(stringRepresentation: String): Either[ParsingError, MeetingDuration] =
-      Try(Duration.parse(stringRepresentation)) match {
-        case Success(value) => MeetingDuration(value).asRight
-        case Failure(exception) => ParsingError("MeetingDuration", exception).asLeft
-      }
+case class MeetingTitle(title: String)
 
-    implicit val meetingHostMeta: Meta[MeetingDuration] = Meta[String].timap(raw =>
-      MeetingDuration(Duration.parse(raw)))(meetingDuration => meetingDuration.value.toString)
-    implicit val read: Read[MeetingDuration] = Read[String].map(raw => MeetingDuration(Duration.parse(raw)))
-    val format: Format = Format("""ISO-8601""")
-  }
+object MeetingTitle {
+  implicit val meetingTitleMeta: Meta[MeetingTitle] = Meta[String].timap(MeetingTitle(_))(_.title)
+  implicit val read: Read[MeetingTitle] = Read[String].map(MeetingTitle.apply)
+  val format: Format = Format("String")
+}
 
-  case class MeetingTitle(title: String)
+case class UserId(id: Long)
 
-  object MeetingTitle {
-    implicit val meetingTitleMeta: Meta[MeetingTitle] = Meta[String].timap(MeetingTitle(_))(_.title)
-    implicit val read: Read[MeetingTitle] = Read[String].map(MeetingTitle.apply)
-    val format: Format = Format("String")
-  }
+object UserId {
+  def apply(stringRepresentation: String): Either[ParsingError, UserId] =
+    Try(stringRepresentation.toLong) match {
+      case Failure(exception) => ParsingError("MeetingHost", exception).asLeft
+      case Success(value)     => UserId(value).asRight
+    }
 
-  case class UserId(id: Long)
+  implicit val userIdMeta: Meta[UserId] = Meta[Long].timap(UserId(_))(_.id)
+  implicit val read: Read[UserId] = Read[Long].map(UserId.apply)
 
-  object UserId {
-    def apply(stringRepresentation: String): Either[ParsingError, UserId] =
-      Try(stringRepresentation.toLong) match {
-        case Failure(exception) => ParsingError("MeetingHost", exception).asLeft
-        case Success(value) => UserId(value).asRight
-      }
+  val format: Format = Format("Long")
+}
 
+case class URL(value: String)
 
-    implicit val userIdMeta: Meta[UserId] = Meta[Long].timap(UserId(_))(_.id)
-    implicit val read: Read[UserId] = Read[Long].map(UserId.apply)
+object URL {
+  implicit val urlMeta: Meta[URL] = Meta[String].timap(URL(_))(_.value)
+  implicit val read: Read[URL] = Read[String].map(URL.apply)
+}
 
-    val format: Format = Format("Long")
-  }
+case class Address(value: String)
 
-  case class URL(value: String)
+object Address {
+  implicit val addressMeta: Meta[Address] = Meta[String].timap(Address(_))(_.value)
+  implicit val read: Read[Address] = Read[String].map(Address.apply)
+}
 
-  object URL {
-    implicit val urlMeta: Meta[URL] = Meta[String].timap(URL(_))(_.value)
-    implicit val read: Read[URL] = Read[String].map(URL.apply)
-  }
+case class MeetingHost(value: UserId)
 
-  case class Address(value: String)
+object MeetingHost {
+  def apply(stringRepresentation: String): Either[ParsingError, MeetingHost] =
+    UserId(stringRepresentation).map(MeetingHost(_))
 
-  object Address {
-    implicit val addressMeta: Meta[Address] = Meta[String].timap(Address(_))(_.value)
-    implicit val read: Read[Address] = Read[String].map(Address.apply)
-  }
+  implicit val meetingHostMeta: Meta[MeetingHost] = Meta[UserId].timap(MeetingHost(_))(_.value)
+  implicit val read: Read[MeetingHost] = Read[UserId].map(MeetingHost.apply)
 
-  case class MeetingHost(value: UserId)
+}
 
-  object MeetingHost {
-    def apply(stringRepresentation: String): Either[ParsingError, MeetingHost] =
-      UserId(stringRepresentation).map(MeetingHost(_))
+case class ChatId(value: Long)
 
-    implicit val meetingHostMeta: Meta[MeetingHost] = Meta[UserId].timap(MeetingHost(_))(_.value)
-    implicit val read: Read[MeetingHost] = Read[UserId].map(MeetingHost.apply)
+object ChatId {
+  implicit val meetingHostMeta: Meta[ChatId] = Meta[Long].timap(ChatId(_))(_.value)
+  implicit val read: Read[ChatId] = Read[Long].map(ChatId.apply)
 
-  }
-
-
-  case class ChatId(value: Long)
-
-  object ChatId {
-    implicit val meetingHostMeta: Meta[ChatId] = Meta[Long].timap(ChatId(_))(_.value)
-    implicit val read: Read[ChatId] = Read[Long].map(ChatId.apply)
-
-    def apply(stringRepresentation: String): Either[ParsingError, ChatId] =
-      Try(stringRepresentation.toLong) match {
-        case Failure(exception) => Left(ParsingError("ChatId", exception))
-        case Success(value) => Right(ChatId(value))
-      }
-  }
+  def apply(stringRepresentation: String): Either[ParsingError, ChatId] =
+    Try(stringRepresentation.toLong) match {
+      case Failure(exception) => Left(ParsingError("ChatId", exception))
+      case Success(value)     => Right(ChatId(value))
+    }
 }

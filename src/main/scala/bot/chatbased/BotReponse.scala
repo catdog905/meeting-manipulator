@@ -2,13 +2,16 @@ package bot.chatbased
 
 import cats.Show
 import error.{AppError, IncorrectInput}
+import tofu.logging.derivation.show.generate
 
 sealed trait BotResponse[+O]
 object BotResponse {
   implicit def show[F[_], O]: Show[BotResponse[O]] = Show.show {
-    case argumentRequest: ArgumentRequest[F] => Show[ArgumentRequest[F]].show(argumentRequest)
-    case panic: Panic                        => Show[Panic].show(panic)
-    case commandSummary: CommandSummary      => Show[CommandSummary].show(commandSummary)
+    case argumentRequest: ArgumentRequest[_] =>
+      Show[ArgumentRequest[F]].show(argumentRequest.asInstanceOf[ArgumentRequest[F]])
+    case panic: Panic                   => Show[Panic].show(panic)
+    case commandSummary: CommandSummary => Show[CommandSummary].show(commandSummary)
+    case noResponse: NoResponse         => Show[NoResponse].show(noResponse)
   }
 }
 

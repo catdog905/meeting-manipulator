@@ -1,33 +1,19 @@
 package storage
 
+import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
-import cats.effect.{IO, Resource}
-import com.github.nscala_time.time.Imports
-import com.opentable.db.postgres.embedded.{EmbeddedPostgres, LiquibasePreparer}
-import com.opentable.db.postgres.junit.{EmbeddedPostgresRules, PreparedDbRule}
+import cats.syntax.either._
 import dao.MeetingSql
 import domain._
 import doobie.WeakAsync.doobieWeakAsyncForAsync
+import doobie.implicits._
+import error.AppError
 import io.github.liquibase4s.cats.CatsMigrationHandler._
-import doobie.hikari.HikariTransactor
-import doobie.implicits.toSqlInterpolator
-import doobie.{ExecutionContexts, Transactor}
-import org.junit.Rule
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.BeforeAndAfter
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.should.Matchers
-import org.testcontainers.containers.PostgreSQLContainer
-import storage.MeetingStorage
-import doobie._
-import doobie.implicits._
-import doobie.syntax._
-import error.AppError
-import io.github.liquibase4s.{Liquibase, LiquibaseConfig}
-import cats.syntax.either._
 
 import java.time.{Duration, Period, ZoneId, ZonedDateTime}
-import scala.concurrent.ExecutionContext
 
 class MeetingStorageSpec extends AsyncFreeSpec with AsyncIOSpec with BeforeAndAfter with Matchers {
 
