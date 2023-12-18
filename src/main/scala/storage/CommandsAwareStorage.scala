@@ -10,7 +10,8 @@ import error.{AppError, NoPermissionToCancelMeeting}
 case class CommandsAwareStorage[F[_]: Monad](
   meetingStorage: MeetingStorage[F],
   userStorage: UserStorage[F],
-  meetingParticipantStorage: MeetingParticipantStorage[F]
+  meetingParticipantStorage: MeetingParticipantStorage[F],
+  notificationStorage: NotificationStorage[F]
 ) {
   def userId(chatId: ChatId): F[Either[AppError, UserId]] = userStorage.getUserIdByChatId(chatId).flatMap {
     case Some(userId) => Applicative[F].pure(userId.asRight)

@@ -54,3 +54,12 @@ CREATE TABLE meeting_reminder.meeting_participant (
 COMMENT ON TABLE meeting_reminder.meeting_participant IS 'Table with every meeting participant';
 COMMENT ON COLUMN meeting_reminder.meeting_participant.meeting_id IS 'Meeting ID';
 COMMENT ON COLUMN meeting_reminder.meeting_participant.user_id IS 'User ID';
+
+
+CREATE TABLE meeting_reminder.notification
+(
+    notification_id SERIAL   NOT NULL PRIMARY KEY,
+    meeting_id      int      NOT NULL REFERENCES meeting_reminder.meeting (id),
+    user_id         int      NOT NULL REFERENCES meeting_reminder."user" (id),
+    time_to_meeting interval NOT NULL
+)

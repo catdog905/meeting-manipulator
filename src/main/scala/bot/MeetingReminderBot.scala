@@ -8,8 +8,8 @@ import cats.syntax.all._
 import com.bot4s.telegram.cats.{Polling, TelegramBot}
 import com.bot4s.telegram.methods._
 import com.bot4s.telegram.models.Message
-import domain.ChatId
-import error.AppError
+import domain.{ChatId, MeetingId, Notification, User}
+import error.{AppError, NoSuchUserFound}
 import storage.CommandsAwareStorage
 import sttp.client3.SttpBackend
 
@@ -37,10 +37,39 @@ case class MeetingReminderBot[F[_]: Async](
     response(msg).flatMap(sendMessageF)
   }
 
-  def notifier(sleeper: F[Unit]): F[Unit] =
+  def notifier(sleeper: F[Unit]): F[Unit] = {
+    def notificationsWithChatIds: F[Either[List[AppError], List[(ChatId, Notification)]]] =
+      for {
+        notificationsToSendEither <- commandsAwareStorage.notificationStorage.getNotificationsToSend
+        notificationsToSendWithChatId <- notificationsToSendEither match {
+          case Left(error) => Applicative[F].pure { List(Left(error)) }
+          case Right(notificationsToSend) =>
+            notificationsToSend.map { notification =>
+              commandsAwareStorage.userStorage
+                .getUserById(notification.userId)
+                .map({
+                  case Left(error)       => Left(error)
+                  case Right(None)       => Left(NoSuchUserFound(notification.userId).asPersistenceError)
+                  case Right(Some(user)) => Right((user.chatId, notification))
+                })
+            }.sequence
+        }
+      } yield notificationsToSendWithChatId.partitionMap(identity) match {
+        case (Nil, rights) => Right(rights)
+        case (lefts, _)    => Left(lefts)
+      }
     for {
       _ <- sleeper
-      _ <- request(SendMessage(407956969, "hello"))
+      _ <- Applicative[F].pure { println("problem") }
+      delete <- notificationsWithChatIds.map {
+        case Right(lst) => lst.map {
+          case (chatId, notification) => request(SendMessage(chatId.value, "hello"))
+            .flatMap {
+              _ => commandsAwareStorage.notificationStorage.delete(notification.notificationId)
+            }
+        }.sequence
+      }
       _ <- notifier(sleeper)
     } yield ()
+  }
 }

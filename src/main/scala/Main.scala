@@ -1,7 +1,7 @@
 import bot.MeetingReminderBot
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import config.AppConfig
-import dao.{MeetingParticipantSql, MeetingSql, UserSql}
+import dao.{MeetingParticipantSql, MeetingSql, NotificationSql, UserSql}
 import doobie.Transactor
 import io.github.liquibase4s.Liquibase
 import io.github.liquibase4s.cats.CatsMigrationHandler._
@@ -43,7 +43,8 @@ object Main extends IOApp {
         CommandsAwareStorage[IO](
           PostgresMeetingStorage(MeetingSql.make, transactor),
           PostgresUserStorage(UserSql.make, transactor),
-          PostgresMeetingParticipantStorage(MeetingParticipantSql.make, transactor)
+          PostgresMeetingParticipantStorage(MeetingParticipantSql.make, transactor),
+          PostgresNotificationStorage(NotificationSql.make, transactor)
         )
       )
 
